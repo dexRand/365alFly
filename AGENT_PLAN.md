@@ -8,6 +8,13 @@ in un ambiente disposable.
 L'unico criterio valido è "la mia presentazione appare identica a come
 appare in PowerPoint su Windows".
 
+> **Task operativi:** vedi `tasks/plan.md` (piano di implementazione con
+> rischi e decisioni) e `tasks/todo.md` (checklist dei task con acceptance
+> criteria e verifica). Questo file è il documento strategico/ADR.
+>
+> **Definition of Done di progetto:** in fondo a `tasks/plan.md` +
+> `.opencode/references/definition-of-done.md`.
+
 ---
 
 ## Fase 0 — Intake

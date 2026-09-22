@@ -34,6 +34,9 @@ opzionale (vedi `AGENT_PLAN.md`, Fase 4) — non come strada principale.
 ```
 
 /AGENT\_PLAN.md          — piano di lavoro per l'agente, fasi e gate
+/tasks/plan.md          — piano di implementazione (task, rischi, decisioni)
+/tasks/todo.md          — checklist operativa dei task
+/.opencode/             — skill, reference e persona dell'agente
 /docs/TEST\_MATRIX.md     — presentazioni di test e criteri di fedeltà
 /docs/ACCEPTANCE.md      — criteri di accettazione finali
 /winapps-baseline/       — setup e config della VM WinApps (popolato in Fase 1)
