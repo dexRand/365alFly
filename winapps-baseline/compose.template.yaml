@@ -1,0 +1,36 @@
+# WinApps Windows VM — local template (NO secrets here).
+# Copy to ~/.config/winapps/compose.yaml and set real USERNAME/PASSWORD there.
+# Local file is gitignored by policy; never commit real credentials.
+# Source: winapps-baseline/winapps/compose.yaml (pinned upstream).
+
+name: "winapps"
+volumes:
+  data:
+services:
+  windows:
+    image: ghcr.io/dockur/windows:latest
+    container_name: WinApps
+    environment:
+      VERSION: "11"          # Pro required (not Home) for RDP apps.
+      RAM_SIZE: "4G"
+      CPU_CORES: "4"
+      DISK_SIZE: "64G"
+      USERNAME: "<SET-LOCAL-USERNAME>"
+      PASSWORD: "<SET-LOCAL-PASSWORD>"
+      HOME: "${HOME}"
+    ports:
+      - "127.0.0.1:8006:8006"     # VNC web (local only)
+      - "127.0.0.1:3389:3389/tcp" # RDP (local only)
+      - "127.0.0.1:3389:3389/udp"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    stop_grace_period: 120s
+    restart: on-failure
+    volumes:
+      - data:/storage
+      - ${HOME}:/shared
+      - ./oem:/oem
+    devices:
+      - /dev/kvm
+      - /dev/net/tun

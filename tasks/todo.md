@@ -6,20 +6,20 @@ fedeltà dove indicato).
 
 ## Phase 0 — Intake environmentale
 
-- [ ] Task 1: Probe ambiente host
+- [x] Task 1: Probe ambiente host
   - Acceptance: `docs/environment.md` scritto con host, kernel, WSL2,
     /dev/kvm/nested virt, Docker/Podman, libvirt, FreeRDP, display.
   - Verify: file esistente e compilato con i comandi reali eseguiti
     (output dei probe allegati).
   - Files: `docs/environment.md`, `scripts/probe-env.sh` (se serve).
   - Volume: M.
-- [ ] Task 2: Requisiti WinApps da fonte ufficiale
+- [x] Task 2: Requisiti WinApps da fonte ufficiale
   - Acceptance: `winapps-org/winapps` clonato, doc ufficiale letta,
     requisiti (ISO, RAM/disk, licenza, comandi) riportati con citazione.
   - Verify: sezione source-cited in `docs/environment.md` con link alla doc.
   - Files: `docs/environment.md`, `winapps-baseline/`.
   - Volume: M.
-- [ ] Task 3: Matrice di test pronta
+- [x] Task 3: Matrice di test pronta
   - Acceptance: tutte le presentazioni di `docs/TEST_MATRIX.md` disponibili
     in `winapps-baseline/test_files/`; riferimento nativo Windows individuato.
   - Verify: elenco file presenti + come gli snippet testuali della matrice
@@ -28,9 +28,9 @@ fedeltà dove indicato).
   - Volume: M.
 
 **Checkpoint 0** (far fallire presto):
-- [ ] `docs/environment.md` scritto, blocchi documentati
-- [ ] Requisiti WinApps da fonte ufficiale
-- [ ] Blocchi virt risolti / decisione alternativa documentata
+- [x] `docs/environment.md` scritto, blocchi documentati
+- [x] Requisiti WinApps da fonte ufficiale
+- [x] Blocchi virt risolti / decisione alternativa documentata
 
 ## Phase 1 — Baseline WinApps + gate di fedeltà
 
