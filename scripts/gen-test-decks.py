@@ -159,7 +159,8 @@ def presentation_rels(n: int, with_images: dict) -> str:
 
 def slide_rels(images: dict) -> str:
     rels = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">')
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>')
     for rid in images:
         rels += f'<Relationship Id="rId{rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image{rid}.png"/>'
     return rels + "</Relationships>"
@@ -260,6 +261,7 @@ def deck_fonts():
         ('font', 'Courier New', 'Courier New mono'),
         ('font', 'Impact', 'Impact heavy'),
         ('font', 'Comic Sans MS', 'Comic Sans MS'),
+        ('font', 'Manrope', 'Manrope variable (bundled: winapps-baseline/fonts/)'),
     ]
     slides = []
     for i, (_, f, label) in enumerate(rows):
@@ -372,55 +374,11 @@ def deck_transitions():
     return [s1, s2], {}
 
 
-ANIM = (
-    "<p:timing><p:tnLst><p:par><p:cTn id=\"1\" dur=\"indefinite\" restart=\"never\" nodeType=\"tmRoot\">"
-    "<p:childTnLst>"
-    "<p:seq concurrent=\"1\" nextAc=\"seek\"><p:cTn id=\"2\" dur=\"indefinite\" nodeType=\"mainSeq\">"
-    "<p:childTnLst>"
-    "<p:par><p:cTn id=\"3\" fill=\"hold\"><p:stCondLst><p:cond delay=\"indefinite\"/></p:stCondLst>"
-    "<p:childTnLst>"
-    "<p:par><p:cTn id=\"4\" fill=\"hold\"><p:stCondLst><p:cond delay=\"0\"/></p:stCondLst>"
-    "<p:childTnLst>"
-    "<p:par><p:cTn id=\"5\" presetID=\"2\" presetClass=\"entr\" presetSubtype=\"0\" fill=\"hold\" nodeType=\"clickEffect\">"
-    "<p:stCondLst><p:cond delay=\"0\"/></p:stCondLst>"
-    "<p:childTnLst>"
-    "<p:par><p:cTn id=\"6\" presetID=\"2\" presetClass=\"entr\" presetSubtype=\"0\" fill=\"hold\">"
-    "<p:stCondLst><p:cond delay=\"0\"/></p:stCondLst>"
-    "<p:childTnLst>"
-    "<p:par><p:cTn id=\"7\" presetID=\"2\" presetClass=\"entr\" presetSubtype=\"0\" fill=\"hold\" nodeType=\"withEffect\">"
-    "<p:stCondLst><p:cond delay=\"0\"/></p:stCondLst>"
-    "<p:childTnLst>"
-    "<p:par><p:cTn id=\"8\" presetID=\"2\" presetClass=\"entr\" presetSubtype=\"0\" fill=\"hold\" nodeType=\"withEffect\">"
-    "<p:stCondLst><p:cond delay=\"0\"/></p:stCondLst>"
-    "<p:childTnLst>"
-    "<p:animEffect transition=\"in\" filter=\"fade\"><p:cBhvr>"
-    "<p:cTn id=\"9\" dur=\"500\" fill=\"hold\"><p:stCondLst><p:cond delay=\"0\"/></p:stCondLst></p:cTn>"
-    "<p:tgtEl><p:spTgt spid=\"2\"/></p:tgtEl>"
-    "<p:attrNameLst><p:attrName>style.visibility</p:attrName></p:attrNameLst>"
-    "</p:cBhvr></p:animEffect>"
-    "</p:childTnLst></p:cTn></p:par>"
-    "</p:childTnLst></p:cTn></p:par>"
-    "</p:childTnLst></p:cTn></p:par>"
-    "</p:childTnLst></p:cTn></p:par>"
-    "</p:childTnLst></p:cTn></p:par>"
-    "</p:childTnLst></p:cTn></p:par>"
-    "</p:childTnLst>"
-    "<p:prevCondLst><p:cond evt=\"onPrev\" delay=\"0\"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:prevCondLst>"
-    "<p:nextCondLst><p:cond evt=\"onNext\" delay=\"0\"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:nextCondLst>"
-    "</p:cTn></p:seq>"
-    "</p:childTnLst></p:cTn></p:par></p:tnLst></p:timing>"
-)
-
-
-def deck_animation():
-    s1 = slide_xml(sp_rect(2, 3, 3, 24, 6, "2C3E50", "this box fades in on click", sz=2600), timing=ANIM)
-    s2 = slide_xml(sp_rect(2, 3, 3, 24, 6, "16A085", "plain box (control)", sz=2600))
-    return [s1, s2], {}
-
-
 def main():
     outdir = sys.argv[1] if len(sys.argv) > 1 else "winapps-baseline/test_files"
     os.makedirs(outdir, exist_ok=True)
+    # animation.pptx is generated natively (gen-native-decks.ps1): raw p:timing
+    # with animEffect made PowerPoint reject the file with E_FAIL on open.
     decks = {
         "fonts.pptx": deck_fonts(),
         "textboxes.pptx": deck_textboxes(),
@@ -431,7 +389,6 @@ def main():
         "zorder.pptx": deck_zorder(),
         "groups.pptx": deck_groups(),
         "transitions.pptx": deck_transitions(),
-        "animation.pptx": deck_animation(),
     }
     for name, (slides, images) in decks.items():
         build_deck(os.path.join(outdir, name), slides, images)

@@ -6,8 +6,9 @@
 # upstream winapps clone (external dependency, pinned in winapps-baseline/README.md)
 winapps-baseline/winapps/
 
-# test artifacts - captures and vms
-winapps-baseline/captures/
+# test artifacts - VM render captures + vms are disposable; native baseline is committed
+winapps-baseline/captures/*
+!winapps-baseline/captures/native/
 
 # build artifacts
 *.iso
