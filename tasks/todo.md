@@ -40,6 +40,22 @@ fedeltà dove indicato).
   - Verify: la VM si avvia e PowerPoint parte; immagine privata documentata.
   - Files: `winapps-baseline/`.
   - Volume: L.
+  - Stato al 2026-09-22: VM Win11 Pro (build 26200/25H2) installata e
+    avviata via dockur; RDP (3389) fine-tuning: NLA ok ma il server
+    interrompe la sessione tra license e Demand Active
+    (`BB_ERROR_BLOB`, `close notify`); identico con mstsc. Ipotesi: 25H2
+    con KB Dec-2025 ha bug RDP/RemoteApp lato server (vedi FreeRDP #10864,
+    KB5070311). Tentativi senza esito parte client: `-multitransport`
+    (supera la licenza ma il server chiude dopo il Demand Active), `-gfx`,
+    `-rfx`, `/bpp:16`, `/timeout` ampi. **Decisione: base migrata a
+    Windows 11 LTSC 2024 (`VERSION: "11l"`, 24H2/26100)**, volume ricreato,
+    installazione in corso alla chiusura sessione. Da fare al rientro:
+    validare RDP full-desktop + RemoteApp(`notepad`), validare RAIL con
+    RDPApps.reg, installare Manrope nella VM, capire licenza Office.
+    Office: licenza NON ancora disponibile (utente ha scelto
+    di procedere col resto). Windows: resta non attivato, watermark
+    accettato finché non arriva il gate finale. Installazioni root richieste
+    (es. freerdp2 fallback) vanno fatte dall'utente (sudo non è passwordless).
 - [ ] Task 5: Primo end-to-end "apertura semplice"
   - Acceptance: una slide semplice della matrice apre via WinApps; screenshot
     catturato; confronto col riferimento nativo.

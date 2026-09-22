@@ -16,9 +16,20 @@ upstream da pinare e aggiornare.
 Clone locale per leggere la doc ufficiale:
 `git clone --depth 1 https://github.com/winapps-org/winapps.git winapps/`
 
-## Contenuto previsto
+## Contenuto attuale
 
 - `winapps/` — clone upstream (gitignored)
-- `test_files/` — presentazioni di prova della matrice (Task 3)
-- `captures/` — screenshot WinApps vs nativi per il gate di fedeltà (Task 5/6)
-- `oem/` — script post-install (es. install/attivazione Office) **senza segreti**
+- `test_files/` — 13 presentazioni di prova della matrice (9 OOXML raw +
+  4 native: smartart, charts, media, animation)
+- `captures/native/` — 25 PNG di riferimento (PowerPoint nativo su Windows
+  host), committati; i render della VM sono disposable (gitignored)
+- `fonts/Manrope-VariableFont.ttf` — font obbligatorio per il gate
+  (aggiunto al deck `fonts.pptx`); va installato DENTRO la VM e sul native
+- `compose.template.yaml` — template compose dockur **senza segreti**
+  (credenziali reali solo in `~/.config/winapps/compose.yaml`, chmod 600)
+
+## Config privata (mai committata)
+
+- `~/.config/winapps/compose.yaml` — VM dockur con USERNAME/PASSWORD reali
+- `~/.config/winapps/winapps.conf` — config WinApps (RDP_IP/PORT/USER/PASS)
+- `~/.config/winapps/oem/` — copia di `winapps/`/oem per il post-install

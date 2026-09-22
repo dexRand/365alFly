@@ -3,6 +3,10 @@
 *.tmp
 *.log
 
+# automation marker files (RDP readiness gates, etc.)
+.rdp-gate-ok
+.rdp-gate-*
+
 # upstream winapps clone (external dependency, pinned in winapps-baseline/README.md)
 winapps-baseline/winapps/
 
