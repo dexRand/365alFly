@@ -3,6 +3,12 @@
 *.tmp
 *.log
 
+# upstream winapps clone (external dependency, pinned in winapps-baseline/README.md)
+winapps-baseline/winapps/
+
+# test artifacts - captures and vms
+winapps-baseline/captures/
+
 # build artifacts
 *.iso
 *.qcow2
