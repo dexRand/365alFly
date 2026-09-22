@@ -1,0 +1,14 @@
+# temp / scratch
+.agent-skills-tmp/
+*.tmp
+*.log
+
+# build artifacts
+*.iso
+*.qcow2
+*.vdi
+*.vmdk
+
+# secrets - licenses/activations must never be committed
+*.key
+*.lic

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "skills": {
+    "paths": [".opencode/skills"]
+  },
+  "references": {
+    "docs": {
+      "path": "docs",
+      "description": "Use for project docs, test matrix, acceptance criteria"
+    }
+  }
+}
