@@ -54,18 +54,18 @@ Windows.
 ```mermaid
 flowchart LR
   subgraph HOST["Host Linux"]
-    CLI["CLI pptx-open<br/>pptx-deploy.sh"]
-    BR["Browser<br/>noVNC :8006"]
-    SH["deploy/shared/"]
+    CLI["CLI pptx-open"]
+    BR["Browser - noVNC :8006"]
+    SH["deploy/shared - Z: (bidirezionale)"]
   end
-  subgraph CONT["Docker · dockur/windows · QEMU/KVM"]
+  subgraph CONT["Docker / dockur-windows / QEMU-KVM"]
     WIN["Windows 11 LTSC"]
     PP["Microsoft PowerPoint"]
   end
-  CLI -- "docker compose" --> CONT
+  CLI -- "docker compose" --> WIN
   BR -- "VNC" --> WIN
-  SH <-- "Z: (bidirezionale)" --> WIN
-  WIN --- PP
+  SH -- "file" --> WIN
+  WIN --> PP
 ```
 
 Tutto si configura da un unico file locale, `deploy/.env` (ignorato da git):

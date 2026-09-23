@@ -52,18 +52,18 @@ bidirectionally through a shared folder exposed as `Z:\` in Windows.
 ```mermaid
 flowchart LR
   subgraph HOST["Linux host"]
-    CLI["pptx-open CLI<br/>pptx-deploy.sh"]
-    BR["Browser<br/>noVNC :8006"]
-    SH["deploy/shared/"]
+    CLI["pptx-open CLI"]
+    BR["Browser - noVNC :8006"]
+    SH["deploy/shared - Z: (bidirectional)"]
   end
-  subgraph CONT["Docker · dockur/windows · QEMU/KVM"]
+  subgraph CONT["Docker / dockur-windows / QEMU-KVM"]
     WIN["Windows 11 LTSC"]
     PP["Microsoft PowerPoint"]
   end
-  CLI -- "docker compose" --> CONT
+  CLI -- "docker compose" --> WIN
   BR -- "VNC" --> WIN
-  SH <-- "Z: (bidirectional)" --> WIN
-  WIN --- PP
+  SH -- "files" --> WIN
+  WIN --> PP
 ```
 
 Everything is configured from a single local file, `deploy/.env`
