@@ -40,6 +40,9 @@ call "C:\OEM\configure-trust.bat"
 rem --- Niente blocco/sospensione sessione (serve al wrapper via tastiera) --
 call "C:\OEM\configure-session.bat"
 
+rem --- RemoteApp/RAIL: disabilita allowlist app (seamless) ------------------
+call "C:\OEM\configure-remoteapp.bat"
+
 rem --- Sopprime il prompt di primo avvio/sign-in di Office -----------------
 call "C:\OEM\configure-office.bat"
 

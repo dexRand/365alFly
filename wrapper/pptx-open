@@ -1,20 +1,19 @@
 #!/usr/bin/env bash
-# pptx-open — apre un .pptx con Microsoft PowerPoint REALE nella VM Windows e,
-# per default, attende che l'utente chiuda PowerPoint sincronizzando il file
-# salvato sull'host.
+# pptx-open — apre un .pptx con Microsoft PowerPoint REALE nella VM Windows.
 #
-# Meccanismo (VNC + cartella condivisa, niente RDP/RAIL):
-#   1. copia il file in <SHARED_DIR>/inbox e scrive <SHARED_DIR>/request.txt
-#   2. attiva l'helper nella VM (Z:\o.bat) via monitor QEMU
-#   3. attende <SHARED_DIR>/done.txt (scritto dall'helper quando PowerPoint chiude)
-#   4. risincronizza il file sull'host
+# Modalità default: SEAMLESS (RDP RemoteApp/RAIL) -> PowerPoint appare come
+# finestra nativa sul desktop Linux. Il file viene aperto direttamente dalla
+# sua cartella (redirect `/drive:`), quindi non serve copia/sync: salvi e il
+# file aggiornato è già quello sull'host.
 #
-# Uso: pptx-open [--no-wait] [--kill] [--timeout SEC] FILE
-#      pptx-open --status | --help
+# Modalità alternativa: `--vnc` -> apre nel desktop remoto e sincronizza
+# tramite la cartella condivisa (utile se RAIL non funziona).
+#
+# Uso: pptx-open [--vnc] [--kill] [--status] FILE.pptx
 set -Eeuo pipefail
 
 SCRIPT_NAME="${0##*/}"
-SELF="$(readlink -f -- "${BASH_SOURCE[0]}")"   # risolve eventuali symlink (es. ~/.local/bin)
+SELF="$(readlink -f -- "${BASH_SOURCE[0]}")"
 WRAPPER_DIR="$(cd -- "$(dirname -- "$SELF")" && pwd)"
 ROOT_DIR="$(cd -- "$WRAPPER_DIR/.." && pwd)"
 # shellcheck disable=SC1091  # path dinamico (ROOT_DIR); la lib è testata a parte
@@ -27,8 +26,20 @@ CONTAINER="${PPTX_CONTAINER:-pptx-open-windows}"
 VM_HELPER_SRC="$WRAPPER_DIR/vm/open-file.bat"
 DOCKER_BIN="${PPTX_DOCKER_BIN:-docker}"
 
-WAIT=1
+# Client FreeRDP: su Wayland preferisci wlfreerdp3 (niente XWayland).
+pick_freerdp() {
+  if [ -n "${PPTX_FREERDP_BIN:-}" ]; then printf '%s' "$PPTX_FREERDP_BIN"; return; fi
+  if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v wlfreerdp3 >/dev/null 2>&1; then
+    printf 'wlfreerdp3'; return
+  fi
+  printf 'xfreerdp3'
+}
+FREERDP_BIN="$(pick_freerdp)"
+
+POWERPNT_WIN='C:\Program Files\Microsoft Office\root\Office16\POWERPNT.EXE'
+MODE=rail
 KILL=0
+WAIT=1
 TIMEOUT=1800
 
 log() { printf '%s\n' "$*" >&2; }
@@ -38,19 +49,24 @@ usage() {
   cat <<EOF
 Uso: $SCRIPT_NAME [opzioni] FILE.pptx
 
-Apre FILE.pptx in Microsoft PowerPoint reale (VM Windows) e attende la chiusura,
-poi risincronizza il file salvato sull'host.
+Apre FILE.pptx in Microsoft PowerPoint reale nella VM Windows.
+Default: seamless (finestra nativa su Linux via RDP RemoteApp).
+Con --vnc: desktop remoto, con sincronizzazione via cartella condivisa.
 
 Opzioni:
-  --no-wait        apre e ritorna subito (nessuna sincronizzazione garantita)
-  --kill           a fine sessione ferma la VM (modalità disposable)
-  --timeout SEC    attesa massima della chiusura di PowerPoint (default 1800)
-  --status         mostra lo stato della VM
+  --desktop        desktop Windows completo via RDP (fluido, una finestra)
+  --vnc            desktop remoto VNC (con sincronizzazione cartella condivisa)
+  --no-wait        (solo --vnc) apri e ritorna subito
+  --kill           a fine sessione ferma la VM (disposable)
+  --timeout SEC    (solo --vnc) attesa massima della chiusura (default 1800)
+  --status         stato della VM
   -h, --help       questo messaggio
 
-Fabbrega: $CONTAINER   ·   cartella condivisa in deploy/.env (SHARED_DIR)
+Config: $ENV_FILE
 EOF
 }
+
+load_env() { pptx_load_env "$ENV_FILE"; }
 
 compose_run() {
   if command -v "$DOCKER_BIN" >/dev/null 2>&1 && "$DOCKER_BIN" compose version >/dev/null 2>&1; then
@@ -70,15 +86,13 @@ ensure_vm() {
   vm_running && return 0
   log "VM non attiva: avvio ($CONTAINER)..."
   ( cd "$DEPLOY_DIR" && compose_run up -d )
-  local deadline=$((SECONDS + 240)) ready=0
+  local deadline=$((SECONDS + 240))
   while [ "$SECONDS" -lt "$deadline" ]; do
     if "$DOCKER_BIN" logs --tail 40 "$CONTAINER" 2>&1 | grep -q "Windows started successfully"; then
-      ready=1; break
+      sleep 5; break
     fi
     sleep 3
   done
-  [ "$ready" -eq 1 ] && sleep 5
-  return 0
 }
 
 status() {
@@ -93,9 +107,55 @@ status() {
   log "Cartella condivisa: $share"
 }
 
-load_env() { pptx_load_env "$ENV_FILE"; }
+# --- Seamless (RAIL) --------------------------------------------------------
 
-# Copia il file nella cartella condivisa, scrive request.txt e l'helper o.bat.
+rail_open() {
+  local file="$1" dir base addr port
+  [ -f "$file" ] || die "file non trovato: $file"
+  command -v "$FREERDP_BIN" >/dev/null 2>&1 || die "'$FREERDP_BIN' non trovato (installa freerdp)"
+  load_env || die ".env non trovato ($ENV_FILE); esegui: scripts/pptx-deploy.sh init"
+
+  addr="${BIND_ADDR:-127.0.0.1}"
+  [ "$addr" = "0.0.0.0" ] && addr="127.0.0.1"
+  port="${RDP_PORT:-3389}"
+  dir="$(cd -- "$(dirname -- "$file")" && pwd)"
+  base="$(basename -- "$file")"
+
+  ensure_vm
+
+  # L'app accede al file tramite il drive redirect `\\tsclient\pptxopen`.
+  local app="program:$POWERPNT_WIN,file:\\\\tsclient\\pptxopen\\${base},name:PowerPoint"
+  log "apro $base in PowerPoint (seamless). Chiudi la finestra per terminare."
+  printf '%s\n' "$VM_PASSWORD" | "$FREERDP_BIN" \
+    /v:"${addr}:${port}" /u:"$VM_USER" /from-stdin \
+    /cert:ignore /sec:tls \
+    /drive:pptxopen,"$dir" \
+    "/app:$app" \
+    /size:1280x800 +clipboard /sound
+}
+
+# --- Desktop RDP completo (fluido, una finestra) ----------------------------
+
+desktop_open() {
+  local file="$1" dir base addr port
+  command -v "$FREERDP_BIN" >/dev/null 2>&1 || die "'$FREERDP_BIN' non trovato (installa freerdp)"
+  load_env || die ".env non trovato ($ENV_FILE); esegui: scripts/pptx-deploy.sh init"
+  addr="${BIND_ADDR:-127.0.0.1}"; [ "$addr" = "0.0.0.0" ] && addr="127.0.0.1"
+  port="${RDP_PORT:-3389}"
+  dir="$(cd -- "$(dirname -- "$file")" 2>/dev/null && pwd)" || dir="$(dirname -- "$file")"
+  base="$(basename -- "$file")"
+
+  ensure_vm
+  log "apro il desktop Windows (RDP, fluido). Il file è raggiungibile dal drive 'pptxopen'."
+  printf '%s\n' "$VM_PASSWORD" | "$FREERDP_BIN" \
+    /v:"${addr}:${port}" /u:"$VM_USER" /from-stdin \
+    /cert:ignore /sec:tls /dynamic-resolution \
+    /drive:pptxopen,"$dir" +clipboard /sound \
+    /wm-class:MicrosoftPowerPoint
+}
+
+# --- Desktop remoto VNC (fallback) ------------------------------------------
+
 stage_file() {
   local share="$1" file="$2" base
   base="$(basename -- "$file")"
@@ -116,38 +176,20 @@ trigger_helper() {
     k($_) for ("shift-z","shift-semicolon","backslash","o","dot","b","a","t");
     k("ret");
     select(undef,undef,undef,3.0);
-    k("alt-r");   # accetta "Open File - Security Warning" -> Run
-    select(undef,undef,undef,9.0);
-    k("esc");     # chiude il prompt "Sign in" di Office (non attivazione)
+    k("alt-r");
     close $s;'
 }
 
 wait_done() {
   local share="$1" deadline=$((SECONDS + TIMEOUT))
   while [ ! -f "$share/done.txt" ]; do
-    if [ "$SECONDS" -ge "$deadline" ]; then
-      die "timeout: PowerPoint non ha chiuso entro ${TIMEOUT}s"
-    fi
+    [ "$SECONDS" -ge "$deadline" ] && die "timeout: PowerPoint non ha chiuso entro ${TIMEOUT}s"
     sleep 2
   done
   grep -q '^ok' "$share/done.txt" || die "la VM ha segnalato un errore: $(cat "$share/done.txt")"
 }
 
-sync_back() {
-  local share="$1" file="$2" base
-  base="$(basename -- "$file")"
-  [ -f "$share/inbox/$base" ] || die "file mancante nella cartella condivisa: $base"
-  cp -f "$share/inbox/$base" "$file"
-}
-
-cleanup() {
-  local share="$1" file="$2" base
-  base="$(basename -- "$file")"
-  rm -f "$share/request.txt" "$share/done.txt" "$share/o.bat" "$share/inbox/$base"
-  rmdir "$share/inbox" 2>/dev/null || true
-}
-
-open_file() {
+vnc_open() {
   local file="$1" share base
   [ -f "$file" ] || die "file non trovato: $file"
   load_env || die ".env non trovato ($ENV_FILE); esegui: scripts/pptx-deploy.sh init"
@@ -156,22 +198,26 @@ open_file() {
   ensure_vm
   stage_file "$share" "$file"
   trigger_helper
-  log "PowerPoint aperto nella VM ($(basename -- "$file")); chiudilo per sincronizzare."
+  log "PowerPoint aperto nella VM (VNC); chiudilo per sincronizzare."
 
   if [ "$WAIT" -eq 1 ]; then
     wait_done "$share"
-    sync_back "$share" "$file"
-    cleanup "$share" "$file"
+    base="$(basename -- "$file")"
+    cp -f "$share/inbox/$base" "$file"
+    rm -f "$share/request.txt" "$share/done.txt" "$share/o.bat" "$share/inbox/$base"
+    rmdir "$share/inbox" 2>/dev/null || true
     log "sincronizzato: $file"
-  else
-    log "modalità --no-wait: il file resta in $share/inbox (nessuna sincronizzazione)"
   fi
 }
+
+# --- dispatch ---------------------------------------------------------------
 
 main() {
   local file=""
   while [ "$#" -gt 0 ]; do
     case "$1" in
+      --desktop) MODE=desktop ;;
+      --vnc)     MODE=vnc ;;
       --no-wait) WAIT=0 ;;
       --kill)    KILL=1 ;;
       --timeout) shift; [ "$#" -ge 1 ] || die "--timeout richiede un valore"; TIMEOUT="$1" ;;
@@ -179,16 +225,21 @@ main() {
       -h|--help) usage; return 0 ;;
       --) shift; file="${1:-}"; break ;;
       -*) die "opzione sconosciuta: $1" ;;
-      *)
-        [ -z "$file" ] || die "troppi argomenti: $1"
-        file="$1"
-        ;;
+      *) [ -z "$file" ] || die "troppi argomenti: $1"; file="$1" ;;
     esac
     shift
   done
 
   [ -n "$file" ] || { usage >&2; exit 2; }
-  open_file "$file"
+
+  if [ "$MODE" = "vnc" ]; then
+    vnc_open "$file"
+  elif [ "$MODE" = "desktop" ]; then
+    desktop_open "$file"
+  else
+    rail_open "$file"
+  fi
+
   if [ "$KILL" -eq 1 ]; then
     log "fermo la VM (--kill)..."
     ( cd "$DEPLOY_DIR" && compose_run down )

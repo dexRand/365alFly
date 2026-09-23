@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Test di wrapper/pptx-open — VM e docker sostituiti da stub.
+# Test di wrapper/pptx-open — VM/docker/freerdp sostituiti da stub.
 
 setup() {
   R="$BATS_TEST_DIRNAME/.."
@@ -32,11 +32,20 @@ esac
 EOF
   chmod +x "$TMP/bin/docker"
 
+  cat > "$TMP/bin/freerdp-fake" <<'EOF'
+#!/usr/bin/env bash
+cat >/dev/null 2>&1 || true
+printf '%s\n' "$@" > "${FAKE_FR_ARGS:-/dev/null}"
+exit 0
+EOF
+  chmod +x "$TMP/bin/freerdp-fake"
+
   export PPTX_DEPLOY_DIR="$TMP/deploy"
   export PPTX_ENV_FILE="$TMP/deploy/.env"
   export PPTX_COMPOSE_FILE="$TMP/deploy/compose.yaml"
   export PPTX_DOCKER_BIN="$TMP/bin/docker"
-  export FAKE_SHARE="$SHARED" FAKE_BASE="deck.pptx"
+  export PPTX_FREERDP_BIN="$TMP/bin/freerdp-fake"
+  export FAKE_SHARE="$SHARED" FAKE_BASE="deck.pptx" FAKE_FR_ARGS="$TMP/fr.args"
 }
 
 teardown() { rm -rf "$TMP"; }
@@ -65,25 +74,31 @@ teardown() { rm -rf "$TMP"; }
   [[ "$output" == *"opzione sconosciuta"* ]]
 }
 
-@test "open: prepara la richiesta, attende e risincronizza il file" {
-  FAKE_MODIFY=1 run "$WRAPPER" "$FILE"
+@test "seamless (default): invoca freerdp con /app:program:...POWERPNT.EXE" {
+  run "$WRAPPER" "$FILE"
   [ "$status" -eq 0 ]
-  # il file originale deve contenere la modifica fatta "nella VM"
+  run grep -q 'program:C:\\Program Files\\Microsoft Office\\root\\Office16\\POWERPNT.EXE' "$FAKE_FR_ARGS"
+  [ "$status" -eq 0 ]
+  run grep -q 'drive:pptxopen' "$FAKE_FR_ARGS"
+  [ "$status" -eq 0 ]
+}
+
+@test "desktop: invoca freerdp senza /app" {
+  run "$WRAPPER" --desktop "$FILE"
+  [ "$status" -eq 0 ]
+  run grep -q '/app:' "$FAKE_FR_ARGS"
+  [ "$status" -ne 0 ]
+}
+
+@test "--vnc: prepara la richiesta, attende e risincronizza il file" {
+  FAKE_MODIFY=1 run "$WRAPPER" --vnc "$FILE"
+  [ "$status" -eq 0 ]
   run cat "$FILE"
   [[ "$output" == *"MODIFIED"* ]]
 }
 
-@test "open: scrive request.txt con il percorso relativo Windows" {
-  run "$WRAPPER" "$FILE"
-  [ "$status" -eq 0 ]
-  # cleanup già avvenuto: la cartella condivisa non deve restare sporca
-  [ ! -f "$SHARED/request.txt" ]
-  [ ! -f "$SHARED/done.txt" ]
-  [ ! -f "$SHARED/o.bat" ]
-}
-
-@test "open: errore segnalato dalla VM interrompe con exit 1" {
-  FAKE_DONE="error:powerpoint" run "$WRAPPER" "$FILE"
+@test "--vnc: errore segnalato dalla VM interrompe con exit 1" {
+  FAKE_DONE="error:powerpoint" run "$WRAPPER" --vnc "$FILE"
   [ "$status" -eq 1 ]
   [[ "$output" == *"la VM ha segnalato un errore"* ]]
 }
