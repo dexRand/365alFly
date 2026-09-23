@@ -69,7 +69,7 @@ EOF
 # --- .env -------------------------------------------------------------------
 
 # Variabili lette da .env dallo script (docker compose legge il file da sé).
-readonly ENV_KEYS="OFFICE_EDITION OFFICE_KEY OFFICE_LANGUAGE OFFICE_EXCLUDE INSTALL_OFFICE ODT_URL"
+readonly ENV_KEYS="OFFICE_EDITION OFFICE_KEY OFFICE_LANGUAGE OFFICE_EXCLUDE INSTALL_OFFICE ODT_URL SHARED_DIR"
 
 # Carica .env senza eseguirlo: niente `source`, niente eval. Un valore con
 # spazi o caratteri speciali non può quindi diventare un comando.
@@ -188,15 +188,16 @@ cmd_doctor() {
     echo "  Esito: $failures requisito/i mancante/i."
   fi
 
-  # BTRFS + disco raw: CoW può danneggiare il setup Windows. Mitigazione:
-  # chattr +C sulla directory del volume (fa ereditare No_COW ai nuovi file).
+  # BTRFS + disco raw: CoW può danneggiare il setup Windows. Mitigazione una
+  # volta sola: chattr +C sulla directory del volume (No_COW per i nuovi file).
+  # Non la verifichiamo (la dir del volume è root-only): solo promemoria.
   local docker_root fs_type
   docker_root="$("$DOCKER_BIN" info --format '{{.DockerRootDir}}' 2>/dev/null)" || docker_root=""
   [ -n "$docker_root" ] || docker_root="/var/lib/docker"
   fs_type="$(stat -f -c %T "$docker_root" 2>/dev/null || echo unknown)"
   if [ "$fs_type" = "btrfs" ]; then
-    echo "  [WARN] /storage è su btrfs: applica una volta"
-    echo "         sudo chattr +C \"\$(docker volume inspect -f '{{.Mountpoint}}' pptx-open_vmdata)\""
+    echo "  [info] /storage è su btrfs: se non l'hai già fatto, una volta sola:"
+    echo "         sudo chattr +C \"\$(${DOCKER_BIN} volume inspect -f '{{.Mountpoint}}' pptx-open_vmdata)\""
   fi
 
   return "$failures"
@@ -311,6 +312,25 @@ cmd_prepare() {
     log "font copiati in $FONTS_DST"
   else
     warn "nessun font in $FONTS_SRC (il gate di fedeltà sui font ne avrà bisogno)"
+  fi
+
+  # Cartella condivisa bidirezionale (Z:\ nella VM). Vi si seminano i deck di
+  # test per il gate di fedeltà, senza sporcare il repo.
+  local shared_dir="${SHARED_DIR:-./shared}"
+  case "$shared_dir" in
+    /*) ;;
+    *) shared_dir="$DEPLOY_DIR/$shared_dir" ;;
+  esac
+  mkdir -p "$shared_dir"
+  local seed_src="${PPTX_SEED_SRC:-$ROOT_DIR/winapps-baseline/test_files}"
+  local seed_dst
+  seed_dst="$(cd "$shared_dir" && pwd)/test_files"
+  if [ "$seed_dst" != "$seed_src" ] && compgen -G "$seed_src/*.pptx" >/dev/null; then
+    mkdir -p "$seed_dst"
+    cp -u "$seed_src"/*.pptx "$seed_dst"/
+    log "cartella condivisa: $shared_dir (deck di test in test_files/, visibili in Z:\\)"
+  else
+    log "cartella condivisa: $shared_dir (visibile in Z:\\)"
   fi
 }
 

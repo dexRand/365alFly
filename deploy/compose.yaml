@@ -57,7 +57,7 @@ services:
     volumes:
       - vmdata:/storage
       # Cartella scambiata con la VM: diventa Z:\ e "Shared" sul desktop.
-      - "${SHARED_DIR:-../winapps-baseline}:/shared"
+      - "${SHARED_DIR:-./shared}:/shared"
       # Provisioning post-install (install.bat + config Office generata).
       - ./oem:/oem
 

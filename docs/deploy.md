@@ -54,7 +54,7 @@ Tutto ciò che cambia spesso sta in `deploy/.env` (gitignored, `chmod 600`):
 | `WINDOWS_VERSION`, `VM_RAM`, `VM_CPU`, `VM_DISK` | risorse VM |
 | `BIND_ADDR`, `WEB_PORT`, `RDP_PORT`, `VNC_PORT` | rete (default loopback) |
 | `WEB_PROTECT` | `Y` = login Basic su web UI; default `N` (solo loopback) |
-| `SHARED_DIR` | cartella condivisa con la VM (`Z:\`) |
+| `SHARED_DIR` | cartella condivisa bidirezionale con la VM (`Z:\`), default `deploy/shared` |
 
 Il template pubblico è `deploy/.env.example`. `deploy/compose.yaml` non
 contiene segreti: legge tutto da `.env` via `--env-file`.
@@ -148,6 +148,21 @@ scripts/pptx-deploy.sh url
 
 Nel desktop Windows apri PowerPoint e i file condivisi da `Z:\` (`Shared`).
 Per RDP usare FreeRDP o qualunque client: `127.0.0.1:3389`.
+
+## Cartella condivisa (`Z:\`)
+
+`SHARED_DIR` (default `deploy/shared`, gitignorata) è montata nella VM come
+`Z:\` e come cartella **"Shared"** sul desktop. È bidirezionale:
+
+```
+host: deploy/shared/mia.pptx   ->   VM: Z:\mia.pptx
+VM salva Z:\mia2.pptx          ->   host: deploy/shared/mia2.pptx
+```
+
+`scripts/pptx-deploy.sh prepare` crea la cartella e vi copia i deck di test in
+`deploy/shared/test_files/` (visibili come `Z:\test_files\`), così il gate di
+fedeltà funziona senza toccare `winapps-baseline/`. Per usare i tuoi documenti,
+cambia `SHARED_DIR` in `deploy/.env` (assoluta o relativa a `deploy/`).
 
 ## Struttura
 

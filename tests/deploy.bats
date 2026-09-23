@@ -178,6 +178,25 @@ EOF
   [ -f "$PPTX_DEPLOY_DIR/oem/fonts/Manrope-VariableFont.ttf" ]
 }
 
+@test "prepare crea la cartella condivisa e vi semina i deck di test" {
+  mkdir -p "$TMP_DIR/seed"
+  : > "$TMP_DIR/seed/alpha.pptx"
+  export PPTX_SEED_SRC="$TMP_DIR/seed"
+  write_env $'OFFICE_EDITION=o365\nSHARED_DIR=./shared'
+  deploy prepare
+  [ "$status" -eq 0 ]
+  [ -f "$PPTX_DEPLOY_DIR/shared/test_files/alpha.pptx" ]
+}
+
+@test "prepare rispetta un SHARED_DIR assoluto" {
+  local custom="$TMP_DIR/documenti"
+  write_env "OFFICE_EDITION=o365
+SHARED_DIR=$custom"
+  deploy prepare
+  [ "$status" -eq 0 ]
+  [ -d "$custom" ]
+}
+
 # --- docker / up ------------------------------------------------------------
 
 @test "up prepara l'OEM e avvia docker compose" {
