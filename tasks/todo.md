@@ -75,6 +75,12 @@ fedeltà dove indicato).
     `data.img`. Da fare: attendere fine provisioning Office, aprire PowerPoint.
   - Cleanup host a fine progetto: rimuovere il sudoers temporaneo dell'agent
     (vedi sezione "Cleanup a fine progetto").
+  - Garanzia "install pulita" VERIFICATA 2026-09-23: eseguito un `down -v` +
+    `up` reale (~22 min); a installazione fresca, aprendo PowerPoint senza
+    alcun Esc manuale il popup "Sign in to set up Office" NON compare
+    (`nagkiller.vbs` in Startup + Run). Bug trovato dal test: commento inline
+    in `.env` (`WINDOWS_VERSION`) rompeva `VERSION` → rimosso e bloccato da un
+    test dedicato.
 - [x] Task 5: Primo end-to-end "apertura semplice"
   - Acceptance: una slide semplice della matrice apre via WinApps; screenshot
     catturato; confronto col riferimento nativo.

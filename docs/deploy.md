@@ -96,7 +96,9 @@ con **barra di avanzamento** (visibile via VNC) che legge `C:\OEM\status.txt`,
 così l'installazione lunga non sembra bloccata.
 
 Grazie a questo, un `docker compose down -v` seguito da `up` ricrea un ambiente
-identico **senza** il popup di sign-in (verifica in corso: vedi `tasks/todo.md`).
+identico **senza** il popup di sign-in. **Verificato il 2026-09-23**: dopo un
+`down -v` reale, aprendo PowerPoint senza alcun aiuto manuale il prompt non
+compare (resta solo la striscia PRODUCT NOTICE).
 
 `scripts/pptx-deploy.sh prepare` genera `configuration.xml` e copia i font da
 `winapps-baseline/fonts/` prima di avviare la VM.
