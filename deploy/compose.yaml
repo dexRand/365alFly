@@ -1,0 +1,68 @@
+# pptx-open — Windows + PowerPoint reali su Linux (backend dockur/windows).
+#
+# Nessun segreto in questo file: credenziali e chiavi di licenza vivono solo in
+# deploy/.env (gitignored). Avvio consigliato:
+#
+#     scripts/pptx-deploy.sh init   # una volta: crea .env con password casuale
+#     scripts/pptx-deploy.sh up     # valida l'host, prepara OEM e avvia la VM
+#
+# Riferimenti: https://github.com/dockur/windows (docs/environment.md).
+name: pptx-open
+
+services:
+  windows:
+    # Pin a una versione esplicita per riproducibilità (upstream: dockur/windows).
+    # Aggiornare deliberatamente quando serve: `docker manifest inspect dockurr/windows`.
+    image: dockurr/windows:6.05
+    container_name: pptx-open-windows
+
+    environment:
+      # --- Windows ---
+      VERSION: "${WINDOWS_VERSION:-11l}"       # 11l = LTSC 2024 (leggero, RDP stabile)
+      KEY: "${WINDOWS_KEY:-}"                  # vuoto = non attivato (watermark tollerato in dev)
+      LANGUAGE: "${WINDOWS_LANGUAGE:-en-US}"
+      USERNAME: "${VM_USER:?VM_USER mancante in deploy/.env}"
+      PASSWORD: "${VM_PASSWORD:?VM_PASSWORD mancante in deploy/.env}"
+      # --- Risorse ---
+      RAM_SIZE: "${VM_RAM:-6G}"
+      CPU_CORES: "${VM_CPU:-4}"
+      DISK_SIZE: "${VM_DISK:-64G}"
+      # --- Display / web VNC ---
+      DISPLAY: "web"
+      WIDTH: "${DISPLAY_WIDTH:-1600}"
+      HEIGHT: "${DISPLAY_HEIGHT:-900}"
+      WEB: "Y"
+      WEB_PORT: "8006"
+      VNC_PORT: "5900"
+      PROTECT: "${WEB_PROTECT:-N}"             # N=nessun login (loopback); Y=VM_USER/VM_PASSWORD
+      # --- Diagnostica install (install.bat -> C:\OEM\install.log) ---
+      LOG: "Y"
+      REMOVE: "Y"                              # elimina l'ISO scaricato dopo l'install
+      SHUTDOWN: "Y"
+
+    devices:
+      - /dev/kvm
+      - /dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+
+    # Solo loopback per default: la VM non è raggiungibile dalla rete.
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:${WEB_PORT:-8006}:8006"        # VNC web (noVNC)
+      - "${BIND_ADDR:-127.0.0.1}:${RDP_PORT:-3389}:3389/tcp"    # RDP
+      - "${BIND_ADDR:-127.0.0.1}:${RDP_PORT:-3389}:3389/udp"
+      - "${BIND_ADDR:-127.0.0.1}:${VNC_PORT:-5900}:5900"        # VNC nativo
+
+    volumes:
+      - vmdata:/storage
+      # Cartella scambiata con la VM: diventa Z:\ e "Shared" sul desktop.
+      - "${SHARED_DIR:-../winapps-baseline}:/shared"
+      # Provisioning post-install (install.bat + config Office generata).
+      - ./oem:/oem
+
+    restart: unless-stopped
+    stop_grace_period: 2m
+
+volumes:
+  vmdata:

@@ -131,3 +131,32 @@ Link: https://github.com/winapps-org/winapps .
 - [x] Repo ufficiale WinApps clonato in `winapps-baseline/winapps` e doc letta
 - [x] Requisiti riportati con citazione (sezione sopra)
 - [x] `freerdp3-x11` disponibile nei repo ufficiali Ubuntu 24.04 (3.31.0)
+
+## Aggiornamento 2026-09-23 — host nativo Arch/CachyOS
+
+L'ambiente di sviluppo è passato a **Linux nativo CachyOS (Arch)**, kernel
+`7.2.6-1-cachyos`. Probe (`bash scripts/probe-env.sh`):
+
+| Voce | Valore |
+|---|---|
+| CPU | 8 core |
+| RAM | 15 GiB totali (~7,7 GiB liberi) |
+| Disco | 822 G liberi su `/` |
+| `/dev/kvm` | presente e scrivibile (`crw-rw-rw-`) → KVM ok |
+| Docker / Podman / libvirt / QEMU | assenti → **da installare** |
+| FreeRDP (`xfreerdp*`) | assente → da installare |
+| Display | Wayland (`wayland-1`, `DISPLAY=:1`) |
+| shellcheck / bats | assenti → da installare |
+
+Rispetto all'host WSL2, qui la virtualizzazione annidata **non** è un problema
+(`/dev/kvm` nativo). Installazione richiesta (una volta):
+
+```bash
+sudo pacman -S --needed docker qemu-full freerdp shellcheck bats
+sudo systemctl enable --now docker
+sudo usermod -aG docker "$USER"    # richiede un nuovo login
+```
+
+Il percorso container VNC/RDP è in `deploy/` e si guida con
+`scripts/pptx-deploy.sh`; vedi `docs/deploy.md`. Dopo l'installazione,
+`scripts/pptx-deploy.sh doctor` deve riportare l'host pronto.

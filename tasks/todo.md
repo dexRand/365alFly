@@ -56,6 +56,25 @@ fedeltà dove indicato).
     di procedere col resto). Windows: resta non attivato, watermark
     accettato finché non arriva il gate finale. Installazioni root richieste
     (es. freerdp2 fallback) vanno fatte dall'utente (sudo non è passwordless).
+  - Stato al 2026-09-23 (Arch nativo): predisposto il percorso **container
+    diretto VNC/RDP** in `deploy/` (`dockur/windows` + Office via Office
+    Deployment Tool): CLI `scripts/pptx-deploy.sh init|doctor|office-config|
+    prepare|up|down|reset|logs|status|url`; 21 test `bats` verdi, `shellcheck`
+    pulito; `deploy/.env` generato con credenziali casuali (chmod 600,
+    gitignored). Da fare: `sudo pacman -S docker qemu-full freerdp`, login
+    nuovamente per il gruppo docker, poi `scripts/pptx-deploy.sh up` e verifica
+    runtime (desktop VNC + PowerPoint). Vedi `docs/deploy.md` e ADR 0001.
+  - Avanzamento 2026-09-23: `docker`, `docker-compose`, `freerdp`, `shellcheck`,
+    `bats` installati via `pkexec` (polkit); immagine `dockurr/windows:6.05`
+    scaricata; container avviato, Windows 11 LTSC in installazione. Applicato
+    `chattr +C` alla directory del volume (mitigazione btrfs).
+  - Runtime verificato: Windows 11 LTSC installato, desktop e autologin utente
+    `pptx`; `install.bat` in esecuzione (ODT → Office `o365`, nessuna key →
+    trial, **nessun MAS**); Windows Eval non attivato (atteso). Web UI senza
+    login (`WEB_PROTECT=N`). Verifica attività: `docker stats` + crescita
+    `data.img`. Da fare: attendere fine provisioning Office, aprire PowerPoint.
+  - Cleanup host a fine progetto: rimuovere il sudoers temporaneo dell'agent
+    (vedi sezione "Cleanup a fine progetto").
 - [ ] Task 5: Primo end-to-end "apertura semplice"
   - Acceptance: una slide semplice della matrice apre via WinApps; screenshot
     catturato; confronto col riferimento nativo.
@@ -117,3 +136,11 @@ fedeltà dove indicato).
 ## Verifica finale (docs/ACCEPTANCE.md)
 
 - [ ] Tutti i criteri di accettazione finali spuntati con evidenze.
+
+## Cleanup a fine progetto (robaccia lasciata sull'host)
+
+- [ ] Rimuovere il sudoers temporaneo creato per l'agent:
+      `sudo rm /etc/sudoers.d/99-pptx-open-agent`
+      (era stato aggiunto il 2026-09-23 per evitare i prompt polkit durante il
+      provisioning; va togliato quando il progetto è finito.)
+- [ ] `scripts/pptx-deploy.sh reset --yes` se non serve più la VM Windows.

@@ -56,6 +56,8 @@ screenshot della matrice in `docs/TEST_MATRIX.md`, non su "si apre".
 - **Task 4: Provisioning VM Windows + Office** — seguire procedura ufficiale
   WinApps; golden image con Office attivato. **Nessun segreto in repo.**
   (skil `source-driven-development` + `security-and-hardening`.)
+  Percorso container diretto VNC/RDP in `deploy/` (dockur/windows + ODT),
+  config in `deploy/.env`; vedi `docs/deploy.md` e ADR 0001.
 - **Task 5: Primo test end-to-end "apertura semplice"** — slide semplice
   (test #1 della matrice) aperta via WinApps, screenshot, confronto con
   riferimento nativo.

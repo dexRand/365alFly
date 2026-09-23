@@ -23,3 +23,10 @@ winapps-baseline/captures/*
 # secrets - licenses/activations must never be committed
 *.key
 *.lic
+
+# deploy: config locale e artefatti generati (segreti/chiavi restano fuori git)
+deploy/.env
+deploy/oem/office/configuration.xml
+deploy/oem/office/odt-url.txt
+deploy/oem/fonts/
+deploy/shared/
