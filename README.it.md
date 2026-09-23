@@ -13,11 +13,23 @@
 ![Test](https://img.shields.io/badge/tests-33%20passing-2ea44f)
 ![Licenza](https://img.shields.io/badge/license-MIT-blue)
 
-```console
-$ pptx-open presentazione.pptx
-```
-
 ---
+
+## Indice
+
+- [Perché PowerPoint vero (e non Wine)](#perché-powerpoint-vero-e-non-wine)
+- [Come funziona](#come-funziona)
+- [Requisiti](#requisiti)
+- [Avvio rapido](#avvio-rapido)
+- [Uso](#uso)
+- [Configurazione](#configurazione)
+- [Licenze e attivazione](#licenze-e-attivazione)
+- [Gate di fedeltà](#gate-di-fedeltà)
+- [Struttura del progetto](#struttura-del-progetto)
+- [Stato e roadmap](#stato-e-roadmap)
+- [Documentazione](#documentazione)
+- [Ispirato da e costruito con](#ispirato-da-e-costruito-con)
+- [Licenza](#licenza)
 
 ## Perché PowerPoint vero (e non Wine)
 
@@ -116,7 +128,9 @@ Metti qualsiasi file in `deploy/shared/` e lo trovi in Windows sotto **`Z:\`**
 (e nella cartella **Shared** sul desktop). Le modifiche fatte in Office tornano
 nella stessa cartella: è bidirezionale.
 
-## Configurazione (`deploy/.env`)
+## Configurazione
+
+Tutto sta in `deploy/.env` (creato da `init`, ignorato da git, `chmod 600`).
 
 | Variabile | Scopo |
 |---|---|
@@ -129,7 +143,7 @@ nella stessa cartella: è bidirezionale.
 | `BIND_ADDR`, `WEB_PORT`, `RDP_PORT`, `VNC_PORT`, `WEB_PROTECT` | rete |
 | `SHARED_DIR` | cartella condivisa con la VM (`Z:\`) |
 
-Modifica `deploy/.env` e rilancia `scripts/pptx-deploy.sh up` per applicare.
+Modifica il file e rilancia `scripts/pptx-deploy.sh up` per applicare.
 
 ## Licenze e attivazione
 
@@ -192,13 +206,26 @@ docs/                   guida deploy, guida wrapper, TEST_MATRIX, ADR
 - [`docs/winapps-manual.md`](docs/winapps-manual.md) — note storiche WinApps/RAIL
 - [`AGENT_PLAN.md`](AGENT_PLAN.md) · [`tasks/`](tasks) — roadmap e task
 
-## Crediti
+## Ispirato da e costruito con
 
-Basato su [`dockur/windows`](https://github.com/dockur/windows) (Windows in
-Docker), ispirato a [WinApps](https://github.com/winapps-org/winapps), e usa
-l'[Office Deployment Tool](https://learn.microsoft.com/microsoft-365-apps/deploy/office-deployment-tool-configuration-options)
-ufficiale di Microsoft. Tutti i nomi e i marchi sono dei rispettivi proprietari;
-questo progetto non è affiliato a Microsoft.
+Questo progetto sta sulle spalle di altri. In ordine di importanza:
+
+| Progetto | Cosa ne abbiamo preso |
+|---|---|
+| [**dockur/windows**](https://github.com/dockur/windows) | Il container Windows-in-Docker (QEMU/KVM) che è il nostro backend, e l'aggancio di provisioning OEM/`install.bat`. |
+| [**WinApps**](https://github.com/winapps-org/winapps) | L'idea di eseguire applicazioni Windows *vere* su Linux via FreeRDP; la nostra baseline di Fase 1 e la roadmap seamless. |
+| [**qemus/qemu**](https://github.com/qemus/qemu) | Il layer QEMU-in-Docker su cui si appoggia `dockur/windows`. |
+| [**FreeRDP**](https://github.com/FreeRDP/FreeRDP) | Il client RDP usato per parlare con la VM (e, in futuro, per il RemoteApp seamless). |
+| [**noVNC**](https://github.com/novnc/noVNC) | Il visualizzatore VNC web servito sulla porta 8006. |
+| [**Microsoft Office Deployment Tool**](https://learn.microsoft.com/microsoft-365-apps/deploy/office-deployment-tool-configuration-options) | Il modo ufficiale e supportato per installare Office in modo automatico. |
+
+**Volutamente non usati**, perché non raggiungono la soglia di fedeltà: Wine,
+LibreOffice, OnlyOffice. **Progetti correlati** utili se vuoi l'integrazione
+completa del desktop: [WinBoat](https://winboat.app) e
+[WinPodX](https://www.winpodx.org).
+
+Tutti i nomi, i loghi e i marchi sono dei rispettivi proprietari. Questo
+progetto non è affiliato a Microsoft.
 
 ## Licenza
 
