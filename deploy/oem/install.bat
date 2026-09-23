@@ -26,6 +26,9 @@ if exist "C:\OEM\office\configuration.xml" (
   echo [pptx-open] Office non configurato, salto l'installazione
 )
 
+rem --- Trusted location Z:\ e Protected View off --------------------------
+call "C:\OEM\configure-trust.bat"
+
 rem --- Report finale ------------------------------------------------------
 if exist "%ProgramFiles%\Microsoft Office\root\Office16\POWERPNT.EXE" (
   echo [pptx-open] PowerPoint presente: %ProgramFiles%\Microsoft Office\root\Office16\POWERPNT.EXE

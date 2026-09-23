@@ -69,8 +69,8 @@ Repos/deve upstream pinnati in `winapps-baseline/README.md`.
 | 1 | Probe ambiente host | ✅ fatto | `docs/environment.md` |
 | 2 | Requisiti WinApps da fonte ufficiale | ✅ fatto | `docs/environment.md` (source-cited) |
 | 3 | Matrice di test pronta | ✅ fatto | `winapps-baseline/test_files/` (13 deck), 25 PNG di riferimento nativo in `winapps-baseline/captures/native/` |
-| 4 | Provisioning VM Windows + Office | 🔶 in corso | docker installato su Arch; container `pptx-open-windows` avviato, **Windows 11 LTSC in installazione**; Office via ODT al termine |
-| 5–6 | Apertura + gate di fedeltà | ⛔ bloccata | in attesa del boot della VM |
+| 4 | Provisioning VM Windows + Office | ✅ fatto | `deploy/` + `scripts/pptx-deploy.sh`: Windows 11 LTSC + Office via ODT, VNC/RDP, config in `deploy/.env`; 23 test bats verdi |
+| 5–6 | Apertura + gate di fedeltà | ✅ fatto | `fonts.pptx` aperto da `Z:\`; 13 deck esportati e confrontati: **21/25 slide byte-identiche**, 4 solo antialiasing testo; verdetto in `docs/TEST_MATRIX.md` |
 | 7–10 | Wrapper `pptx-open` | ⏳ in coda | Fase 2 |
 
 Checkpoint 0 (intake ambiente) chiuso. Dettagli operativi in

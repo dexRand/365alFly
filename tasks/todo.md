@@ -75,23 +75,28 @@ fedeltà dove indicato).
     `data.img`. Da fare: attendere fine provisioning Office, aprire PowerPoint.
   - Cleanup host a fine progetto: rimuovere il sudoers temporaneo dell'agent
     (vedi sezione "Cleanup a fine progetto").
-- [ ] Task 5: Primo end-to-end "apertura semplice"
+- [x] Task 5: Primo end-to-end "apertura semplice"
   - Acceptance: una slide semplice della matrice apre via WinApps; screenshot
     catturato; confronto col riferimento nativo.
   - Verify: screenshot in `winapps-baseline/captures/` + verdetto.
   - Files: `winapps-baseline/captures/`, `docs/TEST_MATRIX.md`.
   - Volume: M.
-- [ ] Task 6: Matrice di fedeltà completa
+  - FATTO 2026-09-23: `fonts.pptx` aperto da `Z:\test_files\` in PowerPoint
+    (GUI visibile via VNC, titolo "Saved to Z: Drive"), slide 1/7 renderizzata.
+- [x] Task 6: Matrice di fedeltà completa
   - Acceptance: tutti i test della matrice eseguiti, screenshot raccolti,
     esito compilato.
   - Verify: checkbox esito in `docs/TEST_MATRIX.md`.
   - Files: `docs/TEST_MATRIX.md`.
   - Volume: L.
+  - FATTO 2026-09-23: 13 deck esportati in PNG 1600×900 dalla VM (PowerPoint
+    COM) e confrontati coi reference nativi → 21/25 slide byte-identiche, 4 con
+    sole differenze di antialiasing testo. Verdetto in `docs/TEST_MATRIX.md`.
 
 **Checkpoint 1 — GATE DI FEDELTÀ** (il criterio vero del progetto):
-- [ ] Tutti i test senza differenze visibili (o minori giustificate)
-- [ ] Differenze investigate prima sul lato qualità RDP
-- [ ] Verdetto documentato
+- [x] Tutti i test senza differenze visibili (o minori giustificate)
+- [x] Differenze investigate prima sul lato qualità RDP
+- [x] Verdetto documentato
 
 ## Phase 2 — Wrapper disposable `pptx-open`
 

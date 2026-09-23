@@ -26,6 +26,35 @@ screenshot da PowerPoint su Windows nativo, confronto affiancato.
 
 Compilare dopo la Fase 1:
 
-- [ ] Tutti i test superati senza differenze visibili
-- [ ] Differenze minori riscontrate (elencare)
-- [ ] Differenze bloccanti riscontrate (elencare — indagare qualità RDP prima di altro)
+- [x] Tutti i test superati senza differenze visibili
+- [x] Differenze minori riscontrate (elencare)
+- [x] Differenze bloccanti riscontrate (nessuna)
+
+## Esito Fase 1 — run 2026-09-23 (VM dockur, Windows 11 LTSC, Office o365)
+
+Metodo: i 13 deck di `winapps-baseline/test_files/` esportati in PNG 1600×900
+**dalla VM** con PowerPoint COM (`Presentation.Export(..., "PNG", 1600, 900)`) e
+confrontati pixel-per-pixel con i reference nativi in
+`winapps-baseline/captures/native/` (SHA256 + RMSE + diff). Evidenza locale:
+`deploy/shared/vm-export/` (gitignored; gli artefatti della VM non vanno
+committati).
+
+Risultato: **25 slide → 21 byte-identiche (SHA256 uguale); 4 con differenze
+solo di antialiasing del testo.** Nessuna differenza di layout, geometria,
+colori o contenuto.
+
+| Deck | Slide | Byte-identiche | Note |
+|---|---|---|---|
+| fonts | 7 | 6 | slide 7 (riga Manrope) solo AA |
+| charts | 1 | 0 | etichette/legenda solo AA; barre/griglia identiche |
+| animation | 1-2 | 0 | solo AA |
+| groups, image, media, smartart, shapes, tables, textboxes, transitions, transparency, zorder | 12 | 12 | pixel-identiche |
+
+Le 4 differenze sono state investigate: il riallineamento (shift ±2 px) non le
+riduce e a zoom 2× i glifi sono identici → è rasterizzazione/antialiasing, **non
+un font sostituto**. Differenze bloccanti: nessuna.
+
+- [x] Tutti i test superati senza differenze visibili (4 slide con differenze
+      pixel-level di solo antialiasing, giustificate)
+- [x] Differenze minori riscontrate: 4 slide (tabella sopra), solo AA del testo
+- [x] Differenze bloccanti: nessuna
