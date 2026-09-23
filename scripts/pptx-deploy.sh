@@ -98,7 +98,10 @@ cmd_init() {
 
   local password
   password="$(gen_password)"
-  sed "s|^VM_PASSWORD=.*|VM_PASSWORD=${password}|" "$ENV_EXAMPLE" > "$ENV_FILE"
+  # Copia il template, imposta la password e rimuove eventuali commenti inline
+  # (es. `KEY=val  # nota`): docker compose li passerebbe come parte del valore.
+  sed -e "s|^VM_PASSWORD=.*|VM_PASSWORD=${password}|" \
+      -e 's/[[:space:]]\+#.*$//' "$ENV_EXAMPLE" > "$ENV_FILE"
   chmod 600 "$ENV_FILE"
 
   log "creato $ENV_FILE (chmod 600)"
@@ -171,6 +174,12 @@ cmd_doctor() {
   if [ "$fs_type" = "btrfs" ]; then
     echo "  [info] /storage è su btrfs: se non l'hai già fatto, una volta sola:"
     echo "         sudo chattr +C \"\$(${DOCKER_BIN} volume inspect -f '{{.Mountpoint}}' pptx-open_vmdata)\""
+  fi
+
+  # Commenti inline nei valori di .env: docker compose non li rimuove e il
+  # valore arriva sporco al container (es. VERSION="11l # nota").
+  if [ -f "$ENV_FILE" ] && grep -qE '^[A-Z_]+=.*[[:space:]]+#' "$ENV_FILE"; then
+    echo "  [WARN] .env: commento inline in un valore — spostalo su una riga a parte"
   fi
 
   return "$failures"

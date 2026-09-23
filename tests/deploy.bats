@@ -247,3 +247,15 @@ SHARED_DIR=$custom"
   [[ "$output" == *"Uso:"* ]]
   [[ "$output" == *"office-config"* ]]
 }
+
+@test "il template .env non ha commenti inline nei valori" {
+  run grep -nE '^[A-Z_]+=.*[[:space:]]+#' "$ROOT_DIR/deploy/.env.example"
+  [ "$status" -ne 0 ]
+}
+
+@test "init rimuove i commenti inline dal .env generato" {
+  printf 'FOO=bar   # commento\n' >> "$PPTX_DEPLOY_DIR/.env.example"
+  deploy init
+  [ "$status" -eq 0 ]
+  grep -q '^FOO=bar$' "$PPTX_ENV_FILE"
+}
