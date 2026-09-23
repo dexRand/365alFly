@@ -32,6 +32,14 @@ call "C:\OEM\configure-trust.bat"
 rem --- Niente blocco/sospensione sessione (serve al wrapper via tastiera) --
 call "C:\OEM\configure-session.bat"
 
+rem --- Sopprime il prompt di primo avvio/sign-in di Office -----------------
+call "C:\OEM\configure-office.bat"
+
+rem --- Chiude da solo "Sign in to set up Office" (NON e' attivazione) -------
+set "NAGK=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\nagkiller.vbs"
+copy /y "C:\OEM\nagkiller.vbs" "%NAGK%" >nul 2>&1
+start "" wscript //B "%NAGK%"
+
 rem --- Report finale ------------------------------------------------------
 if exist "%ProgramFiles%\Microsoft Office\root\Office16\POWERPNT.EXE" (
   echo [pptx-open] PowerPoint presente: %ProgramFiles%\Microsoft Office\root\Office16\POWERPNT.EXE
