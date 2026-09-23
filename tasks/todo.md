@@ -106,25 +106,35 @@ fedeltà dove indicato).
   - Verify: numeri in `tasks/plan.md` o `docs/`.
   - Files: `docs/`, `tasks/plan.md`.
   - Volume: S.
-- [ ] Task 8: Contratto CLI `pptx-open`
+  - Stato: osservazione preliminare — cold (prima installazione Windows+Office)
+    30–60 min; warm (container ricreato, Windows già su disco) ~30–60 s fino a
+    "Windows started successfully". Misura precisa da fare.
+- [x] Task 8: Contratto CLI `pptx-open`
   - Acceptance: flag, exit code, messaggi d'errore, lock definiti e
     testati (bats).
   - Verify: `bats` verde sui test del contratto.
   - Files: `wrapper/`, `wrapper/tests/`.
   - Volume: S.
-- [ ] Task 9: Implementazione wrapper
+  - FATTO: contratto in `docs/wrapper.md`; `--no-wait/--kill/--timeout/--status`;
+    exit 0/1/2; 8 test bats.
+- [x] Task 9: Implementazione wrapper
   - Acceptance: `pptx-open file.pptx` avvia/riusa VM, apre seamless,
     attende chiusura, sincronizza `.pptx`, fa cleanup. shellcheck pulito,
     bats verde.
   - Verify: `shellcheck wrapper/*.sh`; `bats wrapper/tests/`.
   - Files: `wrapper/`, `wrapper/tests/`.
   - Volume: M.
+  - FATTO: implementato su VNC+cartella condivisa (non RAIL, vedi
+    `docs/wrapper.md`). shellcheck pulito, 8/8 bats.
 - [ ] Task 10: Test "explode" end-to-end
   - Acceptance: open → modifica → salva → chiudi → file aggiornato su host →
     ambiente rimosso → ri-apertura pulita.
   - Verify: sequenza documentata e green.
   - Files: `wrapper/tests/`, `docs/`.
   - Volume: M.
+  - Parziale: apertura reale verificata (PowerPoint apre il deck da `Z:\`) e
+    helper verificato (alla chiusura scrive `done.txt=ok`); sincronizzazione
+    coperta da test bats. Manca la sequenza completa modifica+salva sull'host.
 
 **Checkpoint 2:**
 - [ ] `pptx-open` end-to-end funzionante (Fase 3 piano strategico)

@@ -29,6 +29,9 @@ if exist "C:\OEM\office\configuration.xml" (
 rem --- Trusted location Z:\ e Protected View off --------------------------
 call "C:\OEM\configure-trust.bat"
 
+rem --- Niente blocco/sospensione sessione (serve al wrapper via tastiera) --
+call "C:\OEM\configure-session.bat"
+
 rem --- Report finale ------------------------------------------------------
 if exist "%ProgramFiles%\Microsoft Office\root\Office16\POWERPNT.EXE" (
   echo [pptx-open] PowerPoint presente: %ProgramFiles%\Microsoft Office\root\Office16\POWERPNT.EXE

@@ -71,7 +71,7 @@ Repos/deve upstream pinnati in `winapps-baseline/README.md`.
 | 3 | Matrice di test pronta | ✅ fatto | `winapps-baseline/test_files/` (13 deck), 25 PNG di riferimento nativo in `winapps-baseline/captures/native/` |
 | 4 | Provisioning VM Windows + Office | ✅ fatto | `deploy/` + `scripts/pptx-deploy.sh`: Windows 11 LTSC + Office via ODT, VNC/RDP, config in `deploy/.env`; 23 test bats verdi |
 | 5–6 | Apertura + gate di fedeltà | ✅ fatto | `fonts.pptx` aperto da `Z:\`; 13 deck esportati e confrontati: **21/25 slide byte-identiche**, 4 solo antialiasing testo; verdetto in `docs/TEST_MATRIX.md` |
-| 7–10 | Wrapper `pptx-open` | ⏳ in coda | Fase 2 |
+| 7–10 | Wrapper `pptx-open` | 🔶 in corso | `wrapper/pptx-open` + `wrapper/vm/open-file.bat`; 8 test bats; meccanismo VNC+cartella condivisa (helper verificato: scrive `done.txt`); end-to-end completo da chiudere |
 
 Checkpoint 0 (intake ambiente) chiuso. Dettagli operativi in
 `tasks/todo.md` e `tasks/plan.md`.
@@ -182,8 +182,11 @@ disposable, ignorati da git).
 /docs/ACCEPTANCE.md     — criteri di accettazione finali
 /deploy/                — compose + .env + OEM per Windows+PowerPoint (dockur)
 /scripts/pptx-deploy.sh — CLI init/doctor/office-config/up/down/reset
-/tests/deploy.bats      — test della CLI (bats)
+/scripts/lib/           — helper condivisi (parser .env sicuro)
+/tests/deploy.bats      — test CLI ambiente (bats)
+/wrapper/pptx-open      — apre/attende/risincronizza un .pptx (VNC+cartella)
+/wrapper/tests/         — test del wrapper (bats)
+/docs/wrapper.md        — contratto e meccanismo del wrapper
 /winapps-baseline/      — test decks, baseline PNG, template compose, fonts
-/wrapper/               — script pptx-open (Fase 2)
 /wine-poc/              — eventuale POC Wine opzionale (condizionale)
 ```

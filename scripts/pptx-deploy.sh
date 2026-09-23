@@ -68,43 +68,16 @@ EOF
 
 # --- .env -------------------------------------------------------------------
 
-# Variabili lette da .env dallo script (docker compose legge il file da sé).
-readonly ENV_KEYS="OFFICE_EDITION OFFICE_KEY OFFICE_LANGUAGE OFFICE_EXCLUDE INSTALL_OFFICE ODT_URL SHARED_DIR"
+# shellcheck source=scripts/lib/pptx-common.sh
+source "$ROOT_DIR/scripts/lib/pptx-common.sh"
 
-# Carica .env senza eseguirlo: niente `source`, niente eval. Un valore con
-# spazi o caratteri speciali non può quindi diventare un comando.
+# Carica .env (parser sicuro in pptx-common.sh) o esce con messaggio chiaro.
 load_env() {
-  [ -f "$ENV_FILE" ] || die ".env non trovato ($ENV_FILE); esegui: $SCRIPT_NAME init"
-
-  local line key value
-  while IFS= read -r line || [ -n "$line" ]; do
-    case "$line" in ''|\#*) continue ;; esac
-    case "$line" in *=*) ;; *) continue ;; esac
-
-    key="${line%%=*}"
-    value="${line#*=}"
-    case " $ENV_KEYS " in
-      *" $key "*) ;;
-      *) continue ;;
-    esac
-
-    # Rimuove un eventuale paio di quote (singole o doppie).
-    case "$value" in
-      \"*\") value="${value#\"}"; value="${value%\"}" ;;
-      \'*\') value="${value#\'}"; value="${value%\'}" ;;
-    esac
-
-    printf -v "$key" '%s' "$value"
-    export "${key:?}"
-  done < "$ENV_FILE"
+  pptx_load_env "$ENV_FILE" || die ".env non trovato ($ENV_FILE); esegui: $SCRIPT_NAME init"
 }
 
 # Legge una variabile da .env senza eseguirlo (per messaggi e URL).
-env_file_get() {
-  local key="$1" file="${2:-$ENV_FILE}"
-  [ -f "$file" ] || return 1
-  sed -n "s/^${key}=//p" "$file" | tail -n 1
-}
+env_file_get() { pptx_env_get "$1" "$ENV_FILE"; }
 
 gen_password() {
   head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | cut -c1-24

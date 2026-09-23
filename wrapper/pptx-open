@@ -1,0 +1,195 @@
+#!/usr/bin/env bash
+# pptx-open — apre un .pptx con Microsoft PowerPoint REALE nella VM Windows e,
+# per default, attende che l'utente chiuda PowerPoint sincronizzando il file
+# salvato sull'host.
+#
+# Meccanismo (VNC + cartella condivisa, niente RDP/RAIL):
+#   1. copia il file in <SHARED_DIR>/inbox e scrive <SHARED_DIR>/request.txt
+#   2. attiva l'helper nella VM (Z:\o.bat) via monitor QEMU
+#   3. attende <SHARED_DIR>/done.txt (scritto dall'helper quando PowerPoint chiude)
+#   4. risincronizza il file sull'host
+#
+# Uso: pptx-open [--no-wait] [--kill] [--timeout SEC] FILE
+#      pptx-open --status | --help
+set -Eeuo pipefail
+
+SCRIPT_NAME="${0##*/}"
+WRAPPER_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd -- "$WRAPPER_DIR/.." && pwd)"
+# shellcheck source=scripts/lib/pptx-common.sh
+source "$ROOT_DIR/scripts/lib/pptx-common.sh"
+
+DEPLOY_DIR="${PPTX_DEPLOY_DIR:-$ROOT_DIR/deploy}"
+ENV_FILE="${PPTX_ENV_FILE:-$DEPLOY_DIR/.env}"
+COMPOSE_FILE="${PPTX_COMPOSE_FILE:-$DEPLOY_DIR/compose.yaml}"
+CONTAINER="${PPTX_CONTAINER:-pptx-open-windows}"
+VM_HELPER_SRC="$WRAPPER_DIR/vm/open-file.bat"
+DOCKER_BIN="${PPTX_DOCKER_BIN:-docker}"
+
+WAIT=1
+KILL=0
+TIMEOUT=1800
+
+log() { printf '%s\n' "$*" >&2; }
+die() { printf 'errore: %s\n' "$*" >&2; exit 1; }
+
+usage() {
+  cat <<EOF
+Uso: $SCRIPT_NAME [opzioni] FILE.pptx
+
+Apre FILE.pptx in Microsoft PowerPoint reale (VM Windows) e attende la chiusura,
+poi risincronizza il file salvato sull'host.
+
+Opzioni:
+  --no-wait        apre e ritorna subito (nessuna sincronizzazione garantita)
+  --kill           a fine sessione ferma la VM (modalità disposable)
+  --timeout SEC    attesa massima della chiusura di PowerPoint (default 1800)
+  --status         mostra lo stato della VM
+  -h, --help       questo messaggio
+
+Fabbrega: $CONTAINER   ·   cartella condivisa in deploy/.env (SHARED_DIR)
+EOF
+}
+
+compose_run() {
+  if command -v "$DOCKER_BIN" >/dev/null 2>&1 && "$DOCKER_BIN" compose version >/dev/null 2>&1; then
+    "$DOCKER_BIN" compose --env-file "$ENV_FILE" --file "$COMPOSE_FILE" "$@"
+  elif command -v docker-compose >/dev/null 2>&1; then
+    docker-compose --env-file "$ENV_FILE" --file "$COMPOSE_FILE" "$@"
+  else
+    die "serve 'docker compose' (plugin) o 'docker-compose'"
+  fi
+}
+
+vm_running() {
+  "$DOCKER_BIN" ps -q --filter "name=^${CONTAINER}$" 2>/dev/null | grep -q .
+}
+
+ensure_vm() {
+  vm_running && return 0
+  log "VM non attiva: avvio ($CONTAINER)..."
+  ( cd "$DEPLOY_DIR" && compose_run up -d )
+  local deadline=$((SECONDS + 240)) ready=0
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    if "$DOCKER_BIN" logs --tail 40 "$CONTAINER" 2>&1 | grep -q "Windows started successfully"; then
+      ready=1; break
+    fi
+    sleep 3
+  done
+  [ "$ready" -eq 1 ] && sleep 5
+  return 0
+}
+
+status() {
+  load_env || die ".env non trovato ($ENV_FILE); esegui: scripts/pptx-deploy.sh init"
+  local share; share="$(pptx_resolve_shared_dir "$DEPLOY_DIR" "${SHARED_DIR:-./shared}")"
+  if vm_running; then
+    log "VM: attiva ($CONTAINER)"
+    "$DOCKER_BIN" ps --filter "name=^${CONTAINER}$" --format '    {{.Status}}'
+  else
+    log "VM: non attiva"
+  fi
+  log "Cartella condivisa: $share"
+}
+
+load_env() { pptx_load_env "$ENV_FILE"; }
+
+# Copia il file nella cartella condivisa, scrive request.txt e l'helper o.bat.
+stage_file() {
+  local share="$1" file="$2" base
+  base="$(basename -- "$file")"
+  mkdir -p "$share/inbox"
+  cp -f "$file" "$share/inbox/$base"
+  printf 'inbox\\%s\n' "$base" > "$share/request.txt"
+  cp -f "$VM_HELPER_SRC" "$share/o.bat"
+  rm -f "$share/done.txt"
+}
+
+# Attiva Z:\o.bat nella VM tramite il monitor QEMU (sendkey: Win+R, path, Invio).
+# shellcheck disable=SC2016  # il codice perl è letterale, non deve espandersi.
+trigger_helper() {
+  "$DOCKER_BIN" exec "$CONTAINER" perl -MIO::Socket::UNIX -e '
+    my $s = IO::Socket::UNIX->new(Peer => "/run/shm/monitor.sock") or die "monitor: $!\n";
+    sub k { print $s "sendkey $_[0]\n"; select(undef,undef,undef,0.2); }
+    print $s "sendkey meta_l-r\n"; select(undef,undef,undef,1.2);
+    k($_) for ("shift-z","shift-semicolon","backslash","o","dot","b","a","t");
+    k("ret");
+    select(undef,undef,undef,3.0);
+    k("alt-r");   # accetta "Open File - Security Warning" -> Run
+    close $s;'
+}
+
+wait_done() {
+  local share="$1" deadline=$((SECONDS + TIMEOUT))
+  while [ ! -f "$share/done.txt" ]; do
+    if [ "$SECONDS" -ge "$deadline" ]; then
+      die "timeout: PowerPoint non ha chiuso entro ${TIMEOUT}s"
+    fi
+    sleep 2
+  done
+  grep -q '^ok' "$share/done.txt" || die "la VM ha segnalato un errore: $(cat "$share/done.txt")"
+}
+
+sync_back() {
+  local share="$1" file="$2" base
+  base="$(basename -- "$file")"
+  [ -f "$share/inbox/$base" ] || die "file mancante nella cartella condivisa: $base"
+  cp -f "$share/inbox/$base" "$file"
+}
+
+cleanup() {
+  local share="$1" file="$2" base
+  base="$(basename -- "$file")"
+  rm -f "$share/request.txt" "$share/done.txt" "$share/o.bat" "$share/inbox/$base"
+  rmdir "$share/inbox" 2>/dev/null || true
+}
+
+open_file() {
+  local file="$1" share base
+  [ -f "$file" ] || die "file non trovato: $file"
+  load_env || die ".env non trovato ($ENV_FILE); esegui: scripts/pptx-deploy.sh init"
+  share="$(pptx_resolve_shared_dir "$DEPLOY_DIR" "${SHARED_DIR:-./shared}")"
+
+  ensure_vm
+  stage_file "$share" "$file"
+  trigger_helper
+  log "PowerPoint aperto nella VM ($(basename -- "$file")); chiudilo per sincronizzare."
+
+  if [ "$WAIT" -eq 1 ]; then
+    wait_done "$share"
+    sync_back "$share" "$file"
+    cleanup "$share" "$file"
+    log "sincronizzato: $file"
+  else
+    log "modalità --no-wait: il file resta in $share/inbox (nessuna sincronizzazione)"
+  fi
+}
+
+main() {
+  local file=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --no-wait) WAIT=0 ;;
+      --kill)    KILL=1 ;;
+      --timeout) shift; [ "$#" -ge 1 ] || die "--timeout richiede un valore"; TIMEOUT="$1" ;;
+      --status)  status; return 0 ;;
+      -h|--help) usage; return 0 ;;
+      --) shift; file="${1:-}"; break ;;
+      -*) die "opzione sconosciuta: $1" ;;
+      *)
+        [ -z "$file" ] || die "troppi argomenti: $1"
+        file="$1"
+        ;;
+    esac
+    shift
+  done
+
+  [ -n "$file" ] || { usage >&2; exit 2; }
+  open_file "$file"
+  if [ "$KILL" -eq 1 ]; then
+    log "fermo la VM (--kill)..."
+    ( cd "$DEPLOY_DIR" && compose_run down )
+  fi
+}
+
+main "$@"
