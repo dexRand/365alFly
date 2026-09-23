@@ -26,15 +26,9 @@ CONTAINER="${PPTX_CONTAINER:-pptx-open-windows}"
 VM_HELPER_SRC="$WRAPPER_DIR/vm/open-file.bat"
 DOCKER_BIN="${PPTX_DOCKER_BIN:-docker}"
 
-# Client FreeRDP: su Wayland preferisci wlfreerdp3 (niente XWayland).
-pick_freerdp() {
-  if [ -n "${PPTX_FREERDP_BIN:-}" ]; then printf '%s' "$PPTX_FREERDP_BIN"; return; fi
-  if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v wlfreerdp3 >/dev/null 2>&1; then
-    printf 'wlfreerdp3'; return
-  fi
-  printf 'xfreerdp3'
-}
-FREERDP_BIN="$(pick_freerdp)"
+# Client FreeRDP. Default xfreerdp3: wlfreerdp3 è deprecato e non gestisce
+# /from-stdin (chiede la password a video). Override con PPTX_FREERDP_BIN.
+FREERDP_BIN="${PPTX_FREERDP_BIN:-xfreerdp3}"
 
 POWERPNT_WIN='C:\Program Files\Microsoft Office\root\Office16\POWERPNT.EXE'
 MODE=rail
