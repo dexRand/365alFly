@@ -5,9 +5,15 @@ rem C:\OEM. Vedi https://github.com/dockur/windows ("run a command after
 rem installation").
 setlocal EnableExtensions
 
+rem --- Barra di stato visibile nella VM (VNC) -----------------------------
+set "STATUS=C:\OEM\status.txt"
+>"%STATUS%" echo -1 Avvio provisioning...
+if exist "C:\OEM\status-gui.ps1" start "" powershell -NoProfile -ExecutionPolicy Bypass -File "C:\OEM\status-gui.ps1"
+
 echo [pptx-open] OEM provisioning start %DATE% %TIME%
 
 rem --- Font di riferimento (Manrope) necessario al gate di fedelta' -------
+>"%STATUS%" echo -1 Installazione dei font...
 set "FONT_DIR=C:\OEM\fonts"
 if not exist "%FONT_DIR%" set "FONT_DIR=Z:\fonts"
 dir /b "%FONT_DIR%\*.ttf" >nul 2>&1
@@ -19,6 +25,7 @@ if errorlevel 1 (
 )
 
 rem --- Office (solo se il config generato esiste) --------------------------
+>"%STATUS%" echo -1 Installazione Office (10-20 min, download dal CDN Microsoft)...
 if exist "C:\OEM\office\configuration.xml" (
   call "C:\OEM\office\install-office.bat"
   if errorlevel 1 echo [pptx-open] ATTENZIONE: installazione Office fallita
@@ -27,6 +34,7 @@ if exist "C:\OEM\office\configuration.xml" (
 )
 
 rem --- Trusted location Z:\ e Protected View off --------------------------
+>"%STATUS%" echo 85 Configurazione (trusted folder, sessione, prompt)...
 call "C:\OEM\configure-trust.bat"
 
 rem --- Niente blocco/sospensione sessione (serve al wrapper via tastiera) --
@@ -50,5 +58,6 @@ if exist "%ProgramFiles%\Microsoft Office\root\Office16\POWERPNT.EXE" (
 )
 
 echo [pptx-open] OEM provisioning done > "C:\OEM\provisioned.txt"
+>"%STATUS%" echo 100 Fatto. PowerPoint pronto.
 echo [pptx-open] OEM provisioning done
 endlocal

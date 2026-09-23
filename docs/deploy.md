@@ -91,6 +91,10 @@ eseguito all'ultimo passo dell'installazione:
    Non è attivazione né richiede account: è un auto-dismiss del prompt.
 7. scrive `C:\OEM\provisioned.txt` come marcatore.
 
+Durante tutto il provisioning `status-gui.ps1` mostra sul desktop una finestra
+con **barra di avanzamento** (visibile via VNC) che legge `C:\OEM\status.txt`,
+così l'installazione lunga non sembra bloccata.
+
 Grazie a questo, un `docker compose down -v` seguito da `up` ricrea un ambiente
 identico **senza** il popup di sign-in (verifica in corso: vedi `tasks/todo.md`).
 
