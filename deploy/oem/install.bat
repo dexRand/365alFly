@@ -39,6 +39,8 @@ rem --- Chiude da solo "Sign in to set up Office" (NON e' attivazione) -------
 set "NAGK=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\nagkiller.vbs"
 copy /y "C:\OEM\nagkiller.vbs" "%NAGK%" >nul 2>&1
 start "" wscript //B "%NAGK%"
+rem ridondanza: avvialo anche a ogni logon via chiave Run
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v pptxNagKiller /t REG_SZ /d "wscript.exe //B C:\OEM\nagkiller.vbs" /f >nul 2>&1
 
 rem --- Report finale ------------------------------------------------------
 if exist "%ProgramFiles%\Microsoft Office\root\Office16\POWERPNT.EXE" (
