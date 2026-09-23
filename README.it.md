@@ -1,0 +1,205 @@
+# pptx-open
+
+[English](README.md) · **Italiano**
+
+> Apre file `.pptx` con **Microsoft PowerPoint reale** su Linux — stesso
+> motore, stessi font, stesso rendering di Windows — dentro una VM Windows
+> disposable. Niente Wine, niente LibreOffice, nessun compromesso sulla
+> fedeltà.
+
+![Piattaforma](https://img.shields.io/badge/platform-Linux-1793d1?logo=linux&logoColor=white)
+![Backend](https://img.shields.io/badge/backend-dockur%2Fwindows-2496ED?logo=docker&logoColor=white)
+![Office](https://img.shields.io/badge/PowerPoint-real-D24726?logo=microsoftpowerpoint&logoColor=white)
+![Test](https://img.shields.io/badge/tests-33%20passing-2ea44f)
+![Licenza](https://img.shields.io/badge/license-MIT-blue)
+
+```console
+$ pptx-open presentazione.pptx
+```
+
+---
+
+## Perché PowerPoint vero (e non Wine)
+
+Office sotto Wine è storicamente instabile: si rompe a ogni aggiornamento
+Click-to-Run, e le parti che contano di più per la fedeltà — SmartArt,
+animazioni, transizioni, font substitution — sono proprio i punti deboli del
+layer emulato GDI/Direct2D/DirectWrite. Non esiste un'immagine pubblica
+"Wine + Office 365" mantenuta.
+
+Questo progetto prende la strada noiosa e affidabile: **una VM Windows vera, con
+Office vero**, dentro un container e pilotata da Linux. La fedeltà non è
+emulata: è ereditata.
+
+## Come funziona
+
+`dockur/windows` esegue Windows 11 LTSC in QEMU/KVM dentro un container Docker.
+Office viene installato automaticamente con l'Office Deployment Tool (ODT)
+ufficiale di Microsoft. Al desktop si accede via web-VNC (o RDP), e i file si
+scambiano in due direzioni tramite una cartella condivisa esposta come `Z:\` in
+Windows.
+
+```mermaid
+flowchart LR
+  subgraph HOST["Host Linux"]
+    CLI["CLI pptx-open<br/>pptx-deploy.sh"]
+    BR["Browser<br/>noVNC :8006"]
+    SH["deploy/shared/"]
+  end
+  subgraph CONT["Docker · dockur/windows · QEMU/KVM"]
+    WIN["Windows 11 LTSC"]
+    PP["Microsoft PowerPoint"]
+  end
+  CLI -- "docker compose" --> CONT
+  BR -- "VNC" --> WIN
+  SH <-- "Z: (bidirezionale)" --> WIN
+  WIN --- PP
+```
+
+Tutto si configura da un unico file locale, `deploy/.env` (ignorato da git):
+credenziali, risorse, rete e licenze. Nessun segreto viene mai committato.
+
+## Requisiti
+
+- Linux con KVM (`/dev/kvm` presente e scrivibile)
+- Docker (o Docker Desktop / Podman con supporto KVM)
+- ~8 GB di RAM e ~40 GB di disco libero
+- Un trial Microsoft 365 **oppure** una product key per attivare Office (vedi sotto)
+
+## Avvio rapido
+
+```bash
+git clone https://github.com/dexRand/365alFly.git
+cd 365alFly
+
+# prerequisiti host (Arch / CachyOS)
+sudo pacman -S --needed docker
+sudo systemctl enable --now docker
+sudo usermod -aG docker "$USER"        # poi logout e nuovo login
+
+# bootstrap e avvio
+scripts/pptx-deploy.sh init            # crea deploy/.env con password casuale
+scripts/pptx-deploy.sh up              # primo avvio: ~30–60 min (scarica Windows + Office)
+scripts/pptx-deploy.sh url             # apri l'URL stampato nel browser
+```
+
+> Su Debian/Ubuntu il pacchetto del motore è `docker.io`. Su altre distro
+> installa `docker` + il plugin Compose.
+
+Il primo `up` scarica la ISO Windows (~4,7 GB) e installa Office dal CDN di
+Microsoft (~2 GB). È un costo una tantum: il sistema installato vive in un
+volume Docker e dopo riparte dal disco.
+
+## Uso
+
+### GUI (web-VNC)
+
+Apri **<http://127.0.0.1:8006/>** — ottieni il desktop di Windows. Avvia
+PowerPoint dal menu Start e lavora normalmente. La UI è in ascolto solo su
+loopback e per default non chiede login (`WEB_PROTECT=N`).
+
+### Riga di comando
+
+```bash
+# una volta: metti il wrapper nel PATH
+ln -s "$PWD/wrapper/pptx-open" ~/.local/bin/pptx-open
+
+pptx-open presentazione.pptx   # apre nella VM, attende, risincronizza il file salvato
+pptx-open --no-wait deck.pptx  # solo apri
+pptx-open --kill deck.pptx     # apre, e a fine sessione spegne la VM
+pptx-open --status             # stato VM + cartella condivisa
+```
+
+### Scambio file
+
+Metti qualsiasi file in `deploy/shared/` e lo trovi in Windows sotto **`Z:\`**
+(e nella cartella **Shared** sul desktop). Le modifiche fatte in Office tornano
+nella stessa cartella: è bidirezionale.
+
+## Configurazione (`deploy/.env`)
+
+| Variabile | Scopo |
+|---|---|
+| `VM_USER` / `VM_PASSWORD` | account Windows, usato da VNC e RDP |
+| `WINDOWS_KEY` | product key Windows (opzionale) |
+| `OFFICE_EDITION` | `auto` \| `ltsc2024` \| `ltsc2021` \| `2019` \| `o365` |
+| `OFFICE_KEY` | product key Office (25 caratteri) |
+| `OFFICE_LANGUAGE`, `OFFICE_EXCLUDE` | lingua / app Office da non installare |
+| `WINDOWS_VERSION`, `VM_RAM`, `VM_CPU`, `VM_DISK` | risorse VM |
+| `BIND_ADDR`, `WEB_PORT`, `RDP_PORT`, `VNC_PORT`, `WEB_PROTECT` | rete |
+| `SHARED_DIR` | cartella condivisa con la VM (`Z:\`) |
+
+Modifica `deploy/.env` e rilancia `scripts/pptx-deploy.sh up` per applicare.
+
+## Licenze e attivazione
+
+Questo progetto **non include né automatizza alcun tool di pirateria** (niente
+MAS, niente emulatore KMS). L'attivazione segue i meccanismi di Microsoft:
+
+- **Product key** — metti `OFFICE_KEY=xxxxx-xxxxx-xxxxx-xxxxx-xxxxx` in
+  `deploy/.env`; `OFFICE_EDITION=auto` installa **Office LTSC 2024 (Volume)** e
+  lo attiva da solo. Nessun account Microsoft richiesto.
+- **Trial Microsoft 365** — senza key viene installato `o365`; fai il sign-in
+  una volta nella VM per avviare il mese di prova.
+- **Non attivato** — Office apre e renderizza comunque i `.pptx` (in sola
+  lettura dopo il periodo di grazia), sufficiente per il gate di fedeltà.
+
+Il prompt automatico "Sign in to set up Office" viene chiuso da un piccolo
+watcher (`deploy/oem/nagkiller.vbs`) così un'installazione pulita ti porta
+dritto in PowerPoint. È comodità di UI, **non** attivazione.
+
+## Gate di fedeltà
+
+Una funzionalità **non** è fatta quando "PowerPoint si apre": è fatta quando il
+rendering è indistinguibile da PowerPoint su Windows. La suite renderizza 13
+deck difficili dalla VM e li confronta pixel-per-pixel con i reference nativi:
+
+> **21 / 25 slide byte-identiche**; le 4 rimanenti differiscono solo per
+> antialiasing del testo (nessuna differenza di layout, geometria o contenuto).
+> Verdetto: [`docs/TEST_MATRIX.md`](docs/TEST_MATRIX.md).
+
+## Struttura del progetto
+
+```
+deploy/                 compose + .env + provisioning OEM (dockur/windows)
+scripts/pptx-deploy.sh  CLI ambiente: init / doctor / office-config / up / down / reset
+scripts/lib/            helper condivisi (parser .env sicuro)
+wrapper/pptx-open       apre / attende / risincronizza un .pptx (VNC + cartella)
+wrapper/vm/             helper dentro la VM (open-file.bat)
+tests/ + wrapper/tests/ suite di test bats
+winapps-baseline/       deck di test, PNG di riferimento nativi, font
+docs/                   guida deploy, guida wrapper, TEST_MATRIX, ADR
+```
+
+## Stato e roadmap
+
+| Area | Stato |
+|---|---|
+| Ambiente Windows + Office (container, VNC/RDP) | ✅ funzionante |
+| Provisioning automatico (trusted folder, sessione, Office, prompt killer) | ✅ funzionante |
+| Gate di fedeltà (13 deck / 25 slide) | ✅ 21 byte-identiche, 4 solo AA |
+| Wrapper CLI `pptx-open` | ✅ implementato, 33 test verdi |
+| Seamless RAIL (FreeRDP RemoteApp) | ⏳ pianificato |
+| CI (shellcheck + bats) | ⏳ pianificato |
+| Esplorazione Wine | 💤 opzionale, non intrapresa |
+
+## Documentazione
+
+- [`docs/deploy.md`](docs/deploy.md) — guida ambiente e configurazione
+- [`docs/wrapper.md`](docs/wrapper.md) — contratto e meccanismo della CLI
+- [`docs/TEST_MATRIX.md`](docs/TEST_MATRIX.md) — matrice di fedeltà e verdetto
+- [`docs/adr/`](docs/adr) — decisioni architetturali
+- [`docs/winapps-manual.md`](docs/winapps-manual.md) — note storiche WinApps/RAIL
+- [`AGENT_PLAN.md`](AGENT_PLAN.md) · [`tasks/`](tasks) — roadmap e task
+
+## Crediti
+
+Basato su [`dockur/windows`](https://github.com/dockur/windows) (Windows in
+Docker), ispirato a [WinApps](https://github.com/winapps-org/winapps), e usa
+l'[Office Deployment Tool](https://learn.microsoft.com/microsoft-365-apps/deploy/office-deployment-tool-configuration-options)
+ufficiale di Microsoft. Tutti i nomi e i marchi sono dei rispettivi proprietari;
+questo progetto non è affiliato a Microsoft.
+
+## Licenza
+
+[MIT](LICENSE).

@@ -92,7 +92,7 @@ eseguito all'ultimo passo dell'installazione:
 7. scrive `C:\OEM\provisioned.txt` come marcatore.
 
 Grazie a questo, un `docker compose down -v` seguito da `up` ricrea un ambiente
-identico **senza** il popup di sign-in (verificato: vedi `tasks/todo.md`).
+identico **senza** il popup di sign-in (verifica in corso: vedi `tasks/todo.md`).
 
 `scripts/pptx-deploy.sh prepare` genera `configuration.xml` e copia i font da
 `winapps-baseline/fonts/` prima di avviare la VM.

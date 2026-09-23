@@ -1,192 +1,205 @@
 # pptx-open
 
-Comando Linux-nativo per aprire `.pptx` con Microsoft PowerPoint **reale**
-(non LibreOffice/OnlyOffice), con fedeltà di rendering identica a Windows,
-in un ambiente disposable.
+**English** · [Italiano](README.it.md)
 
+> Open `.pptx` files with **real Microsoft PowerPoint** on Linux — the same
+> engine, the same fonts, the same rendering as Windows — inside a disposable
+> Windows VM. No Wine, no LibreOffice, no fidelity compromise.
+
+![Platform](https://img.shields.io/badge/platform-Linux-1793d1?logo=linux&logoColor=white)
+![Backend](https://img.shields.io/badge/backend-dockur%2Fwindows-2496ED?logo=docker&logoColor=white)
+![Office](https://img.shields.io/badge/PowerPoint-real-D24726?logo=microsoftpowerpoint&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-33%20passing-2ea44f)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
+```console
+$ pptx-open presentazione.pptx
 ```
-pptx-open ./presentazione.pptx
+
+---
+
+## Why real PowerPoint (and not Wine)
+
+Office under Wine is historically unstable: it breaks on every Click-to-Run
+update, and the parts that matter most for fidelity — SmartArt, animations,
+transitions, font substitution — are exactly the weak spots of the emulated
+GDI/Direct2D/DirectWrite layer. There is no maintained public
+"Wine + Office 365" image.
+
+This project takes the boring, reliable route: **a real Windows VM, running
+real Office**, kept in a container and driven from Linux. Rendering fidelity is
+not emulated — it is inherited.
+
+## How it works
+
+`dockur/windows` runs Windows 11 LTSC in QEMU/KVM inside a Docker container.
+Office is installed automatically with Microsoft's official Office Deployment
+Tool (ODT). You reach the desktop over web-VNC (or RDP), and files move
+bidirectionally through a shared folder exposed as `Z:\` in Windows.
+
+```mermaid
+flowchart LR
+  subgraph HOST["Linux host"]
+    CLI["pptx-open CLI<br/>pptx-deploy.sh"]
+    BR["Browser<br/>noVNC :8006"]
+    SH["deploy/shared/"]
+  end
+  subgraph CONT["Docker · dockur/windows · QEMU/KVM"]
+    WIN["Windows 11 LTSC"]
+    PP["Microsoft PowerPoint"]
+  end
+  CLI -- "docker compose" --> CONT
+  BR -- "VNC" --> WIN
+  SH <-- "Z: (bidirectional)" --> WIN
+  WIN --- PP
 ```
 
-## Perché non Wine
+Everything is configured from a single local file, `deploy/.env`
+(git-ignored): credentials, resources, network and licenses. No secrets are
+ever committed.
 
-Office 365 sotto Wine è storicamente instabile: si rompe a ogni
-aggiornamento automatico del click-to-run, e le aree più critiche per la
-fedeltà (SmartArt, animazioni, transizioni, font substitution) sono proprio
-i punti deboli del layer di emulazione GDI/Direct2D/DirectWrite. Non esiste
-un'immagine Docker "Wine + Office 365" pubblica e mantenuta. Wine è
-rivalutato solo *dopo* la baseline (Fase 4 condizionale, vedi
-`AGENT_PLAN.md`).
+## Requirements
 
-## Avvio rapido (Linux nativo)
+- Linux with KVM (`/dev/kvm` present and writable)
+- Docker (or Docker Desktop / Podman with KVM support)
+- ~8 GB RAM and ~40 GB free disk
+- A Microsoft 365 trial **or** a product key for Office activation (see below)
 
-Il percorso immediato — Windows + PowerPoint reali, accessibili via **VNC web**
-(o RDP) — è automatizzato in `deploy/`:
+## Quick start
 
 ```bash
-# 1) prerequisiti host (Arch/CachyOS): docker + KVM
-sudo pacman -S --needed docker qemu-full freerdp
-sudo systemctl enable --now docker && sudo usermod -aG docker "$USER"
+git clone https://github.com/dexRand/365alFly.git
+cd 365alFly
 
-# 2) init (credenziali casuali) e avvio
-scripts/pptx-deploy.sh init
-scripts/pptx-deploy.sh up
-scripts/pptx-deploy.sh url     # apri http://127.0.0.1:8006/ nel browser
+# host prerequisites (Arch / CachyOS)
+sudo pacman -S --needed docker
+sudo systemctl enable --now docker
+sudo usermod -aG docker "$USER"        # then log out and back in
+
+# bootstrap and start
+scripts/pptx-deploy.sh init            # creates deploy/.env with a random password
+scripts/pptx-deploy.sh up              # first run: ~30–60 min (downloads Windows + Office)
+scripts/pptx-deploy.sh url             # open the printed URL in your browser
 ```
 
-Credenziali, chiavi di licenza e risorse si cambiano solo in `deploy/.env`
-(gitignored, chmod 600). Guida completa: `docs/deploy.md`; decisione
-architetturale: `docs/adr/0001-container-powerpoint-e-config-env.md`.
+> On Debian/Ubuntu the engine package is `docker.io`. On other distros install
+> `docker` + the Compose plugin.
 
-## Architettura scelta
+The first `up` downloads the Windows ISO (~4.7 GB) and installs Office from
+Microsoft's CDN (~2 GB). It is a one-time cost: the installed system lives in a
+Docker volume and boots from disk afterwards.
 
-Baseline: **WinApps** (https://github.com/winapps-org/winapps) — Windows
-reale, integrazione seamless via FreeRDP, backend Docker/Podman
-(attualmente: immagine `dockur/windows`, che gira QEMU+KVM) o libvirt.
-Fedeltà garantita perché è PowerPoint vero su Windows vero.
+## Usage
 
-- Host: Linux nativo (oggi CachyOS/Arch; la soluzione dev'essere agnostica:
-  Docker/Podman/libvirt, X11/Wayland/WSLg). WSL2 + Docker è stato l'ambiente
-  di sviluppo iniziale, ora non più il target.
-- VM: Windows 11 LTSC 2024 (24H2/26100) — migrata dalla Pro 25H2 il
-  2026-09-22 perché la 25H2 interrompeva la fase RDP di licensing (vedi la
-  nota tecnica sotto). In `deploy/` è il default `WINDOWS_VERSION=11l`.
-- Client RDP: FreeRDP 3 (`xfreerdp3`) in modalità seamless (RemoteApp).
-- Referenza nativa: PowerPoint reale sul Windows host della macchina di
-  sviluppo.
+### GUI (web-VNC)
 
-Il percorso di accesso **immediato** (Task 4, indipendente dal seamless) è il
-container `dockur/windows` avviato da `deploy/`: web-VNC su `127.0.0.1:8006` e
-RDP su `3389`, con Office installato automaticamente dall'Office Deployment
-Tool. La stessa VM alimenterà il seamless WinApps in Fase 2.
+Open **<http://127.0.0.1:8006/>** — you get the Windows desktop. Launch
+PowerPoint from the Start menu and work normally. The UI is bound to loopback
+and needs no login by default (`WEB_PROTECT=N`).
 
-Repos/deve upstream pinnati in `winapps-baseline/README.md`.
+### Command line
 
-## Stato attività
+```bash
+# once: put the wrapper on your PATH
+ln -s "$PWD/wrapper/pptx-open" ~/.local/bin/pptx-open
 
-| # | Attività | Stato | Evidenza |
-|---|----------|-------|----------|
-| 1 | Probe ambiente host | ✅ fatto | `docs/environment.md` |
-| 2 | Requisiti WinApps da fonte ufficiale | ✅ fatto | `docs/environment.md` (source-cited) |
-| 3 | Matrice di test pronta | ✅ fatto | `winapps-baseline/test_files/` (13 deck), 25 PNG di riferimento nativo in `winapps-baseline/captures/native/` |
-| 4 | Provisioning VM Windows + Office | ✅ fatto | `deploy/` + `scripts/pptx-deploy.sh`: Windows 11 LTSC + Office via ODT, VNC/RDP, config in `deploy/.env`; 23 test bats verdi |
-| 5–6 | Apertura + gate di fedeltà | ✅ fatto | `fonts.pptx` aperto da `Z:\`; 13 deck esportati e confrontati: **21/25 slide byte-identiche**, 4 solo antialiasing testo; verdetto in `docs/TEST_MATRIX.md` |
-| 7–10 | Wrapper `pptx-open` | 🔶 in corso | `wrapper/pptx-open` + `wrapper/vm/open-file.bat`; 8 test bats; meccanismo VNC+cartella condivisa (helper verificato: scrive `done.txt`); end-to-end completo da chiudere |
+pptx-open presentazione.pptx   # opens it in the VM, waits, syncs the saved file back
+pptx-open --no-wait deck.pptx  # just open
+pptx-open --kill deck.pptx     # open, then stop the VM when done
+pptx-open --status             # VM state + shared folder
+```
 
-Checkpoint 0 (intake ambiente) chiuso. Dettagli operativi in
-`tasks/todo.md` e `tasks/plan.md`.
+### Exchanging files
 
-### Nota tecnica RDP (2026-09-22)
+Drop anything into `deploy/shared/` and it appears in Windows under **`Z:\`**
+(and the **Shared** desktop folder). Changes made in Office are written back to
+the same folder — it is bidirectional.
 
-La VM Win11 25H2 interrompe la connessione tra licenza e installazione
-sessione: `BB_ERROR_BLOB` + `close notify`, identico con `mstsc` e
-`xfreerdp3`. Individuato con FreeRDP `-multitransport` (supera la licenza,
-il server chiude subito dopo il Demand Active). Riferimenti: FreeRDP
-issue #10864 (Win11/Server2025 + RDP TCP bug), KB5070311 (bug RemoteApp
-Dec-2025). Provate senza esito varie combinazioni client
-(`-multitransport`, `-gfx`, `-rfx`, `/bpp:16`): l'interruzione avviene lato
-server, identica con `mstsc`. **Decisione (2026-09-22): base migrata a
-Windows 11 LTSC 2024 (`VERSION: "11l"`, 24H2/26100)** — build matura,
-RemoteApp/RDP verificati, iso 4.7 GB.
+## Configuration (`deploy/.env`)
 
-## Come riprodurre (Task 4 finora)
+| Variable | Purpose |
+|---|---|
+| `VM_USER` / `VM_PASSWORD` | Windows account, used by VNC and RDP |
+| `WINDOWS_KEY` | Windows product key (optional) |
+| `OFFICE_EDITION` | `auto` \| `ltsc2024` \| `ltsc2021` \| `2019` \| `o365` |
+| `OFFICE_KEY` | Office product key (25 chars) |
+| `OFFICE_LANGUAGE`, `OFFICE_EXCLUDE` | Office language / apps to skip |
+| `WINDOWS_VERSION`, `VM_RAM`, `VM_CPU`, `VM_DISK` | VM resources |
+| `BIND_ADDR`, `WEB_PORT`, `RDP_PORT`, `VNC_PORT`, `WEB_PROTECT` | networking |
+| `SHARED_DIR` | folder shared with the VM (`Z:\`) |
 
-> **Percorso consigliato su Linux nativo:** `deploy/` + `scripts/pptx-deploy.sh`
-> (vedi *Avvio rapido* e `docs/deploy.md`). La procedura manuale WinApps qui
-> sotto resta valida per il seamless (Fase 2) e come riferimento; i comandi
-> `apt` erano per l'ambiente WSL2/Ubuntu.
+Edit `deploy/.env` and re-run `scripts/pptx-deploy.sh up` to apply.
 
-1. **Dipendenze host** (requisiti: KVM, ~14 GB RAM, ~40 GB disco):
+## Licensing & activation
 
-   ```bash
-   sudo apt install -y docker.io xrdp xfreerdp3 shellcheck bats unzip aria2 cpu-checker
-   sudo usermod -aG docker "$USER"
-   sudo kvm-ok   # "KVM acceleration can be used"
-   ```
+This project **does not ship or automate any piracy tool** (no MAS, no KMS
+emulator). Activation follows Microsoft's own mechanisms:
 
-2. **Config privata** (MAI committata — i segreti vivono solo qui):
+- **Product key** — put `OFFICE_KEY=xxxxx-xxxxx-xxxxx-xxxxx-xxxxx` in
+  `deploy/.env`; `OFFICE_EDITION=auto` then installs **Office LTSC 2024
+  (Volume)** and activates it automatically. No Microsoft account required.
+- **Microsoft 365 trial** — with no key, `o365` is installed; sign in once in
+  the VM to start the trial.
+- **Unactivated** — Office still opens and renders `.pptx` files (read-only
+  after the grace period), which is enough for the fidelity gate.
 
-   ```bash
-   mkdir -p ~/.config/winapps
-   cp winapps-baseline/compose.template.yaml ~/.config/winapps/compose.yaml
-   # -> impostare USERNAME/PASSWORD reali in compose.yaml (chmod 600)
-   # template pubblico: winapps-baseline/compose.template.yaml
-   ```
+The unattended "Sign in to set up Office" prompt is auto-dismissed by a small
+watcher (`deploy/oem/nagkiller.vbs`) so a fresh install drops you straight into
+PowerPoint. That is UI convenience, **not** activation.
 
-3. **OEM post-install** (RDPApps.reg per RemoteApp: disabilita l'allowlist):
+## Fidelity gate
 
-   ```bash
-   wa_from=winapps-baseline/winapps
-   cp -r "$wa_from"/oem ~/.config/winapps/oem
-   ```
+A feature is **not** done when "PowerPoint opens" — it is done when the
+rendering is indistinguishable from PowerPoint on Windows. The test suite
+renders 13 tricky decks from the VM and compares them pixel-by-pixel against
+native references:
 
-4. **Config WinApps** (`~/.config/winapps/winapps.conf`, chmod 600):
+> **21 / 25 slides byte-identical**; the remaining 4 differ only in text
+> anti-aliasing (no layout, geometry or content differences).
+> Verdict: [`docs/TEST_MATRIX.md`](docs/TEST_MATRIX.md).
 
-   ```text
-   WAFLAVOR="docker"
-   RDP_IP="127.0.0.1"
-   RDP_PORT="3389"
-   RDP_USER="<USERNAME>"
-   RDP_PASS="<PASSWORD>"
-   CERT_PATH="/cert:tofu"
-   RDP_FLAGS="/cert:tofu /sound /microphone +home-drive"
-   ```
-
-5. **Avvio VM e attesa installazione:**
-
-   ```bash
-   docker compose --file ~/.config/winapps/compose.yaml up -d
-   docker logs -f WinApps   # attendere "Windows started successfully"
-   ```
-
-6. **Test RDP/Rail (seamless):**
-
-   ```bash
-   xfreerdp3 /u:<USERNAME> /p:<PASSWORD> /v:127.0.0.1:3389 \
-     /cert:tofu /app:program:notepad.exe /size:800x600 /timeout:20
-   ```
-
-I certificati TLS/RDPvengono salvati in `~/.config/freerdp/` (tofu:
-cancellare `server/127.0.0.1_3389.pem` dopo ogni cambio certificato VM).
-
-## Segreti e licenze
-
-- Credenziali VM, chiavi e attivazioni: solo in `deploy/.env` (chmod 600,
-  gitignored) per il percorso container, e in `~/.config/winapps/` per il
-  seamless. Mai nel repo.
-- Windows: non attivato per default (watermark "Attiva Windows" accettato in
-  sviluppo); `WINDOWS_KEY` in `.env` se disponibile.
-- Office: `OFFICE_KEY` in `.env` fa attivare automaticamente Office LTSC
-  (Volume); senza key si usa il trial Microsoft 365 (`o365`). Senza key Office
-  resta in sola lettura.
-- **Nessun attivatore di pirateria (MAS/HWID)**: non implementato. Vedi
-  `docs/adr/0001-container-powerpoint-e-config-env.md`.
-
-## Gate di fedeltà
-
-Una funzionalità NON è fatta quando "PowerPoint si apre": è fatta solo
-quando il rendering è indistinguibile da PowerPoint su Windows. Verdetto
-documentato in `docs/TEST_MATRIX.md` con screenshot in
-`winapps-baseline/captures/` (nativi committati; render della VM
-disposable, ignorati da git).
-
-## Struttura
+## Project structure
 
 ```
-/AGENT_PLAN.md          — piano per l'agente, fasi e gate
-/tasks/plan.md          — piano di implementazione (task, rischi, decisioni)
-/tasks/todo.md          — checklist operativa dei task
-/docs/deploy.md         — guida+specifica ambiente container (Task 4)
-/docs/adr/              — decisioni architetturali (ADR)
-/docs/TEST_MATRIX.md    — presentazioni di test e criteri di fedeltà
-/docs/ACCEPTANCE.md     — criteri di accettazione finali
-/deploy/                — compose + .env + OEM per Windows+PowerPoint (dockur)
-/scripts/pptx-deploy.sh — CLI init/doctor/office-config/up/down/reset
-/scripts/lib/           — helper condivisi (parser .env sicuro)
-/tests/deploy.bats      — test CLI ambiente (bats)
-/wrapper/pptx-open      — apre/attende/risincronizza un .pptx (VNC+cartella)
-/wrapper/tests/         — test del wrapper (bats)
-/docs/wrapper.md        — contratto e meccanismo del wrapper
-/winapps-baseline/      — test decks, baseline PNG, template compose, fonts
-/wine-poc/              — eventuale POC Wine opzionale (condizionale)
+deploy/                 compose + .env + OEM provisioning (dockur/windows)
+scripts/pptx-deploy.sh  environment CLI: init / doctor / office-config / up / down / reset
+scripts/lib/            shared helpers (safe .env parser)
+wrapper/pptx-open       open / wait / sync a .pptx (VNC + shared folder)
+wrapper/vm/             in-VM helper (open-file.bat)
+tests/ + wrapper/tests/ bats test suites
+winapps-baseline/       test decks, native reference PNGs, fonts
+docs/                   deploy guide, wrapper guide, TEST_MATRIX, ADRs
 ```
+
+## Status & roadmap
+
+| Area | Status |
+|---|---|
+| Windows + Office environment (container, VNC/RDP) | ✅ working |
+| Auto-provisioning (trusted folder, session, Office, prompt killer) | ✅ working |
+| Fidelity gate (13 decks / 25 slides) | ✅ 21 byte-identical, 4 AA-only |
+| `pptx-open` CLI wrapper | ✅ implemented, 33 tests green |
+| Seamless RAIL integration (FreeRDP RemoteApp) | ⏳ planned |
+| CI (shellcheck + bats) | ⏳ planned |
+| Wine exploration | 💤 optional, not pursued |
+
+## Documentation
+
+- [`docs/deploy.md`](docs/deploy.md) — environment guide & configuration
+- [`docs/wrapper.md`](docs/wrapper.md) — `pptx-open` CLI contract & mechanism
+- [`docs/TEST_MATRIX.md`](docs/TEST_MATRIX.md) — fidelity matrix & verdict
+- [`docs/adr/`](docs/adr) — architecture decisions
+- [`docs/winapps-manual.md`](docs/winapps-manual.md) — historical WinApps/RAIL notes
+- [`AGENT_PLAN.md`](AGENT_PLAN.md) · [`tasks/`](tasks) — roadmap and task tracking
+
+## Credits
+
+Built on [`dockur/windows`](https://github.com/dockur/windows) (Windows in
+Docker), inspired by [WinApps](https://github.com/winapps-org/winapps), and
+using Microsoft's official [Office Deployment Tool](https://learn.microsoft.com/microsoft-365-apps/deploy/office-deployment-tool-configuration-options).
+All product names and trademarks are property of their respective owners; this
+project is not affiliated with Microsoft.
+
+## License
+
+[MIT](LICENSE).
