@@ -81,7 +81,18 @@ eseguito all'ultimo passo dell'installazione:
 
 1. installa i font da `C:\OEM\fonts` (o `Z:\fonts`), necessari al gate Manrope;
 2. se esiste `C:\OEM\office\configuration.xml`, scarica l'ODT e installa Office;
-3. scrive `C:\OEM\provisioned.txt` come marcatore.
+3. `configure-trust.bat` — `Z:\` trusted location di Office + Protected View off;
+4. `configure-session.bat` — screen saver/sospensione off (il wrapper usa la
+   tastiera: una sessione bloccata intercetterebbe i tasti);
+5. `configure-office.bat` — spegne l'onboarding di primo avvio di Office;
+6. `nagkiller.vbs` — copiato nella cartella Startup **e** registrato in
+   `HKCU\...\CurrentVersion\Run`: chiude da solo la finestra
+   **"Sign in to set up Office"** che Office non attivato mostra a ogni avvio.
+   Non è attivazione né richiede account: è un auto-dismiss del prompt.
+7. scrive `C:\OEM\provisioned.txt` come marcatore.
+
+Grazie a questo, un `docker compose down -v` seguito da `up` ricrea un ambiente
+identico **senza** il popup di sign-in (verificato: vedi `tasks/todo.md`).
 
 `scripts/pptx-deploy.sh prepare` genera `configuration.xml` e copia i font da
 `winapps-baseline/fonts/` prima di avviare la VM.
@@ -137,6 +148,13 @@ Le variabili VM sono documentate in
 - **Licenza Office**: `o365` senza key resta in sola lettura finché non fai il
   sign-in/trial; per l'attivazione automatica usa una key Volume (`ltsc2024`).
   Nessun attivatore di pirateria è previsto né supportato (vedi sotto).
+- **`.env`: mai commenti inline nei valori.** Una riga tipo
+  `WINDOWS_VERSION=11l   # nota` fa arrivare a dockur `VERSION` con il commento
+  incluso (`Invalid VERSION`): il commento va su una riga a parte. `init`
+  rimuove gli inline, `doctor` avvisa, un test lo impedisce.
+- **Popup "Sign in to set up Office"**: è il gate di licenza di Office non
+  attivato, non si sopprime via registro. `deploy/oem/nagkiller.vbs` lo chiude
+  da solo in ~1s; per questo un ambiente ricreato da zero non lo mostra.
 
 ## Accesso
 
