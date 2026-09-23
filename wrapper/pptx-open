@@ -14,9 +14,10 @@
 set -Eeuo pipefail
 
 SCRIPT_NAME="${0##*/}"
-WRAPPER_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SELF="$(readlink -f -- "${BASH_SOURCE[0]}")"   # risolve eventuali symlink (es. ~/.local/bin)
+WRAPPER_DIR="$(cd -- "$(dirname -- "$SELF")" && pwd)"
 ROOT_DIR="$(cd -- "$WRAPPER_DIR/.." && pwd)"
-# shellcheck source=scripts/lib/pptx-common.sh
+# shellcheck disable=SC1091  # path dinamico (ROOT_DIR); la lib è testata a parte
 source "$ROOT_DIR/scripts/lib/pptx-common.sh"
 
 DEPLOY_DIR="${PPTX_DEPLOY_DIR:-$ROOT_DIR/deploy}"

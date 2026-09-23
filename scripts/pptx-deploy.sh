@@ -68,7 +68,7 @@ EOF
 
 # --- .env -------------------------------------------------------------------
 
-# shellcheck source=scripts/lib/pptx-common.sh
+# shellcheck disable=SC1091  # path dinamico (ROOT_DIR); la lib è testata a parte
 source "$ROOT_DIR/scripts/lib/pptx-common.sh"
 
 # Carica .env (parser sicuro in pptx-common.sh) o esce con messaggio chiaro.
