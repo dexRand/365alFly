@@ -45,6 +45,16 @@ TIMEOUT=1800
 log() { printf '%s\n' "$*" >&2; }
 die() { printf 'errore: %s\n' "$*" >&2; exit 1; }
 
+# Accesso a docker: se il socket non è accessibile (utente non ancora nel
+# gruppo `docker` dopo l'aggiunta) e `sudo -n` funziona, usa quello.
+DOCKER=( "$DOCKER_BIN" )
+if command -v "$DOCKER_BIN" >/dev/null 2>&1 \
+   && ! "${DOCKER[@]}" info >/dev/null 2>&1 \
+   && command -v sudo >/dev/null 2>&1 \
+   && sudo -n "$DOCKER_BIN" info >/dev/null 2>&1; then
+  DOCKER=( sudo -n "$DOCKER_BIN" )
+fi
+
 usage() {
   cat <<EOF
 Uso: $SCRIPT_NAME [opzioni] FILE.pptx
@@ -69,8 +79,8 @@ EOF
 load_env() { pptx_load_env "$ENV_FILE"; }
 
 compose_run() {
-  if command -v "$DOCKER_BIN" >/dev/null 2>&1 && "$DOCKER_BIN" compose version >/dev/null 2>&1; then
-    "$DOCKER_BIN" compose --env-file "$ENV_FILE" --file "$COMPOSE_FILE" "$@"
+  if command -v "$DOCKER_BIN" >/dev/null 2>&1 && "${DOCKER[@]}" compose version >/dev/null 2>&1; then
+    "${DOCKER[@]}" compose --env-file "$ENV_FILE" --file "$COMPOSE_FILE" "$@"
   elif command -v docker-compose >/dev/null 2>&1; then
     docker-compose --env-file "$ENV_FILE" --file "$COMPOSE_FILE" "$@"
   else
@@ -79,7 +89,7 @@ compose_run() {
 }
 
 vm_running() {
-  "$DOCKER_BIN" ps -q --filter "name=^${CONTAINER}$" 2>/dev/null | grep -q .
+  "${DOCKER[@]}" ps -q --filter "name=^${CONTAINER}$" 2>/dev/null | grep -q .
 }
 
 ensure_vm() {
@@ -88,7 +98,7 @@ ensure_vm() {
   ( cd "$DEPLOY_DIR" && compose_run up -d )
   local deadline=$((SECONDS + 240))
   while [ "$SECONDS" -lt "$deadline" ]; do
-    if "$DOCKER_BIN" logs --tail 40 "$CONTAINER" 2>&1 | grep -q "Windows started successfully"; then
+    if "${DOCKER[@]}" logs --tail 40 "$CONTAINER" 2>&1 | grep -q "Windows started successfully"; then
       sleep 5; break
     fi
     sleep 3
@@ -100,7 +110,7 @@ status() {
   local share; share="$(pptx_resolve_shared_dir "$DEPLOY_DIR" "${SHARED_DIR:-./shared}")"
   if vm_running; then
     log "VM: attiva ($CONTAINER)"
-    "$DOCKER_BIN" ps --filter "name=^${CONTAINER}$" --format '    {{.Status}}'
+    "${DOCKER[@]}" ps --filter "name=^${CONTAINER}$" --format '    {{.Status}}'
   else
     log "VM: non attiva"
   fi
@@ -168,7 +178,7 @@ stage_file() {
 
 trigger_helper() {
   # shellcheck disable=SC2016  # il codice perl è letterale, non deve espandersi
-  "$DOCKER_BIN" exec "$CONTAINER" perl -MIO::Socket::UNIX -e '
+  "${DOCKER[@]}" exec "$CONTAINER" perl -MIO::Socket::UNIX -e '
     my $s = IO::Socket::UNIX->new(Peer => "/run/shm/monitor.sock") or die "monitor: $!\n";
     sub k { print $s "sendkey $_[0]\n"; select(undef,undef,undef,0.2); }
     print $s "sendkey meta_l-r\n"; select(undef,undef,undef,1.2);

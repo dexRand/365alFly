@@ -38,6 +38,16 @@ log()  { printf '%s\n' "$*" >&2; }
 warn() { printf 'attenzione: %s\n' "$*" >&2; }
 die()  { printf 'errore: %s\n' "$*" >&2; exit 1; }
 
+# Accesso a docker: se il socket non è accessibile (utente non ancora nel
+# gruppo `docker` dopo l'aggiunta) e `sudo -n` funziona, usa quello.
+DOCKER=( "$DOCKER_BIN" )
+if command -v "$DOCKER_BIN" >/dev/null 2>&1 \
+   && ! "${DOCKER[@]}" info >/dev/null 2>&1 \
+   && command -v sudo >/dev/null 2>&1 \
+   && sudo -n "$DOCKER_BIN" info >/dev/null 2>&1; then
+  DOCKER=( sudo -n "$DOCKER_BIN" )
+fi
+
 usage() {
   cat <<EOF
 Uso: $SCRIPT_NAME <comando> [opzioni]
@@ -125,7 +135,7 @@ cmd_doctor() {
 
   if command -v "$DOCKER_BIN" >/dev/null 2>&1; then
     echo "  [OK]   docker: $(command -v "$DOCKER_BIN")"
-    if "$DOCKER_BIN" compose version >/dev/null 2>&1; then
+    if "${DOCKER[@]}" compose version >/dev/null 2>&1; then
       echo "  [OK]   docker compose: plugin disponibile"
     elif command -v docker-compose >/dev/null 2>&1; then
       echo "  [OK]   docker compose: docker-compose v2 ($(command -v docker-compose))"
@@ -168,7 +178,7 @@ cmd_doctor() {
   # volta sola: chattr +C sulla directory del volume (No_COW per i nuovi file).
   # Non la verifichiamo (la dir del volume è root-only): solo promemoria.
   local docker_root fs_type
-  docker_root="$("$DOCKER_BIN" info --format '{{.DockerRootDir}}' 2>/dev/null)" || docker_root=""
+  docker_root="$("${DOCKER[@]}" info --format '{{.DockerRootDir}}' 2>/dev/null)" || docker_root=""
   [ -n "$docker_root" ] || docker_root="/var/lib/docker"
   fs_type="$(stat -f -c %T "$docker_root" 2>/dev/null || echo unknown)"
   if [ "$fs_type" = "btrfs" ]; then
@@ -320,8 +330,8 @@ cmd_prepare() {
 
 compose_run() {
   [ -f "$ENV_FILE" ] || die ".env non trovato ($ENV_FILE); esegui: $SCRIPT_NAME init"
-  if command -v "$DOCKER_BIN" >/dev/null 2>&1 && "$DOCKER_BIN" compose version >/dev/null 2>&1; then
-    "$DOCKER_BIN" compose --env-file "$ENV_FILE" --file "$COMPOSE_FILE" "$@"
+  if command -v "$DOCKER_BIN" >/dev/null 2>&1 && "${DOCKER[@]}" compose version >/dev/null 2>&1; then
+    "${DOCKER[@]}" compose --env-file "$ENV_FILE" --file "$COMPOSE_FILE" "$@"
   elif command -v docker-compose >/dev/null 2>&1; then
     docker-compose --env-file "$ENV_FILE" --file "$COMPOSE_FILE" "$@"
   else
