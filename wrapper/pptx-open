@@ -130,8 +130,8 @@ rail_open() {
   # L'app accede al file tramite il drive redirect `\\tsclient\pptxopen`.
   local app="program:$POWERPNT_WIN,file:\\\\tsclient\\pptxopen\\${base},name:PowerPoint"
   log "apro $base in PowerPoint (seamless). Chiudi la finestra per terminare."
-  printf '%s\n' "$VM_PASSWORD" | "$FREERDP_BIN" \
-    /v:"${addr}:${port}" /u:"$VM_USER" /from-stdin \
+  "$FREERDP_BIN" \
+    /v:"${addr}:${port}" /u:"$VM_USER" /p:"$VM_PASSWORD" \
     /cert:ignore /sec:tls \
     /drive:pptxopen,"$dir" \
     "/app:$app" \
@@ -151,8 +151,8 @@ desktop_open() {
 
   ensure_vm
   log "apro il desktop Windows (RDP, fluido). Il file è raggiungibile dal drive 'pptxopen'."
-  printf '%s\n' "$VM_PASSWORD" | "$FREERDP_BIN" \
-    /v:"${addr}:${port}" /u:"$VM_USER" /from-stdin \
+  "$FREERDP_BIN" \
+    /v:"${addr}:${port}" /u:"$VM_USER" /p:"$VM_PASSWORD" \
     /cert:ignore /sec:tls /dynamic-resolution \
     /drive:pptxopen,"$dir" +clipboard /sound \
     /wm-class:MicrosoftPowerPoint
