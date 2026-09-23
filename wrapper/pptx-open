@@ -117,6 +117,8 @@ trigger_helper() {
     k("ret");
     select(undef,undef,undef,3.0);
     k("alt-r");   # accetta "Open File - Security Warning" -> Run
+    select(undef,undef,undef,9.0);
+    k("esc");     # chiude il prompt "Sign in" di Office (non attivazione)
     close $s;'
 }
 
