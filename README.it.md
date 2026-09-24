@@ -7,6 +7,8 @@
 > disposable. Niente Wine, niente LibreOffice, nessun compromesso sulla
 > fedeltà.
 
+Per farlo girare: [Avvio rapido](#avvio-rapido).
+
 ![Piattaforma](https://img.shields.io/badge/platform-Linux-1793d1?logo=linux&logoColor=white)
 ![Backend](https://img.shields.io/badge/backend-dockur%2Fwindows-2496ED?logo=docker&logoColor=white)
 ![Office](https://img.shields.io/badge/PowerPoint-real-D24726?logo=microsoftpowerpoint&logoColor=white)

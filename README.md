@@ -6,6 +6,8 @@
 > engine, the same fonts, the same rendering as Windows — inside a disposable
 > Windows VM. No Wine, no LibreOffice, no fidelity compromise.
 
+Run it locally: [Quick start](#quick-start).
+
 ![Platform](https://img.shields.io/badge/platform-Linux-1793d1?logo=linux&logoColor=white)
 ![Backend](https://img.shields.io/badge/backend-dockur%2Fwindows-2496ED?logo=docker&logoColor=white)
 ![Office](https://img.shields.io/badge/PowerPoint-real-D24726?logo=microsoftpowerpoint&logoColor=white)
