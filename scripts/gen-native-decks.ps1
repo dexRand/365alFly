@@ -7,7 +7,7 @@
   against these PNGs.
 #>
 param(
-    [string]$RepoRoot = "\\wsl.localhost\Ubuntu\home\user\Progetti\365alFly"
+    [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot)
 )
 
 $ErrorActionPreference = "Stop"
