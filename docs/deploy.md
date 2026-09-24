@@ -216,10 +216,13 @@ tests/deploy.bats              — test della CLI (docker sostituito da stub)
 - [x] `init` produce `.env` con password casuale e permessi 600.
 - [x] `doctor` fallisce in modo chiaro se manca KVM o docker.
 - [x] `office-config` genera una `configuration.xml` valida e coerente con
-      `OFFICE_EDITION`/`OFFICE_KEY` (21 test bats verdi, shellcheck pulito).
-- [ ] `up` porta a un desktop con PowerPoint avviabile (verifica runtime,
-      richiede host con docker — non ancora eseguita).
-- [ ] Il gate di fedeltà (`docs/TEST_MATRIX.md`) passa sulla VM via VNC.
+      `OFFICE_EDITION`/`OFFICE_KEY` (suite `tests/deploy.bats`: 25 test verdi,
+      shellcheck pulito).
+- [x] `up` porta a un desktop con PowerPoint avviabile — verificato il
+      2026-09-23: Windows 11 LTSC installato, desktop e autologin utente `pptx`,
+      PowerPoint avviato sulla VM.
+- [x] Il gate di fedeltà (`docs/TEST_MATRIX.md`) passa sulla VM: 21/25 slide
+      byte-identiche, 4 solo antialiasing (2026-09-23).
 
 ## Domande aperte
 
@@ -228,5 +231,7 @@ tests/deploy.bats              — test della CLI (docker sostituito da stub)
    comunque su `127.0.0.1`).
 2. Tempo effettivo di download+install Office dentro `install.bat`: se supera i
    limiti di dockur, spostare l'install su un task al primo logon.
-3. Passaggio da VNC a RDP seamless (RAIL) con FreeRDP 3 e `RDPApps.reg`
-   (prosegue il piano WinApps in Fase 2).
+3. ~~Passaggio da VNC a RDP seamless (RAIL)~~ Risolto: il wrapper usa
+   `xfreerdp3` in RemoteApp (modalità default) e il provisioning imposta la
+   `TSAppAllowList` (`deploy/oem/configure-remoteapp.bat`). Vedi
+   `docs/wrapper.md`.

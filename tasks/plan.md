@@ -47,9 +47,9 @@ screenshot della matrice in `docs/TEST_MATRIX.md`, non su "si apre".
   Windows per il confronto (dove disponibile).
 
 **Checkpoint 0:**
-- [ ] `docs/environment.md` scritto con i blocchi documentati
-- [ ] Requisiti WinApps verificati da fonte ufficiale
-- [ ] Blocchi di virtualizzazione risolti o decisione alternativa presa
+- [x] `docs/environment.md` scritto con i blocchi documentati
+- [x] Requisiti WinApps verificati da fonte ufficiale
+- [x] Blocchi di virtualizzazione risolti o decisione alternativa presa
 
 ### Phase 1 — Baseline WinApps + gate di fedeltà
 
@@ -66,10 +66,10 @@ screenshot della matrice in `docs/TEST_MATRIX.md`, non su "si apre".
   compilare l'esito nel file.
 
 **Checkpoint 1 (gate di fedeltà):**
-- [ ] Tutti i test della matrice superati senza differenze visibili (o
+- [x] Tutti i test della matrice superati senza differenze visibili (o
       differenze minori giustificate)
-- [ ] Eventuali differenze investigate prima tutto sul lato qualità RDP
-- [ ] Verdetto documentato in `docs/TEST_MATRIX.md`
+- [x] Eventuali differenze investigate prima tutto sul lato qualità RDP
+- [x] Verdetto documentato in `docs/TEST_MATRIX.md`
 
 ### Phase 2 — Wrapper disposable `pptx-open`
 

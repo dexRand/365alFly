@@ -10,7 +10,7 @@
 ![Piattaforma](https://img.shields.io/badge/platform-Linux-1793d1?logo=linux&logoColor=white)
 ![Backend](https://img.shields.io/badge/backend-dockur%2Fwindows-2496ED?logo=docker&logoColor=white)
 ![Office](https://img.shields.io/badge/PowerPoint-real-D24726?logo=microsoftpowerpoint&logoColor=white)
-![Test](https://img.shields.io/badge/tests-33%20passing-2ea44f)
+![Test](https://img.shields.io/badge/tests-34%20passing-2ea44f)
 ![Licenza](https://img.shields.io/badge/license-MIT-blue)
 
 ---
@@ -47,9 +47,11 @@ emulata: è ereditata.
 
 `dockur/windows` esegue Windows 11 LTSC in QEMU/KVM dentro un container Docker.
 Office viene installato automaticamente con l'Office Deployment Tool (ODT)
-ufficiale di Microsoft. Al desktop si accede via web-VNC (o RDP), e i file si
-scambiano in due direzioni tramite una cartella condivisa esposta come `Z:\` in
-Windows.
+ufficiale di Microsoft. Per default il wrapper lancia PowerPoint come finestra
+**seamless** via RDP RemoteApp e apre il file sul posto tramite un drive
+reindirizzato, quindi il salvataggio finisce direttamente sull'host. Sono
+disponibili anche un desktop RDP completo (`--desktop`) e una modalità
+web-VNC (`--vnc`, file scambiati tramite la cartella condivisa `Z:\`).
 
 ```mermaid
 flowchart LR
@@ -63,6 +65,7 @@ flowchart LR
     PP["Microsoft PowerPoint"]
   end
   CLI -- "docker compose" --> WIN
+  CLI -- "RDP - seamless / desktop" --> WIN
   BR -- "VNC" --> WIN
   SH -- "file" --> WIN
   WIN --> PP
@@ -116,8 +119,9 @@ loopback e per default non chiede login (`WEB_PROTECT=N`).
 # una volta: metti il wrapper nel PATH
 ln -s "$PWD/wrapper/pptx-open" ~/.local/bin/pptx-open
 
-pptx-open presentazione.pptx   # apre nella VM, attende, risincronizza il file salvato
-pptx-open --no-wait deck.pptx  # solo apri
+pptx-open presentazione.pptx   # finestra PowerPoint seamless, file modificato sul posto
+pptx-open --desktop deck.pptx  # desktop Windows completo via RDP
+pptx-open --vnc deck.pptx      # modalità web-VNC, risincronizza il file salvato
 pptx-open --kill deck.pptx     # apre, e a fine sessione spegne la VM
 pptx-open --status             # stato VM + cartella condivisa
 ```
@@ -178,7 +182,7 @@ deck difficili dalla VM e li confronta pixel-per-pixel con i reference nativi:
 deploy/                 compose + .env + provisioning OEM (dockur/windows)
 scripts/pptx-deploy.sh  CLI ambiente: init / doctor / office-config / up / down / reset
 scripts/lib/            helper condivisi (parser .env sicuro)
-wrapper/pptx-open       apre / attende / risincronizza un .pptx (VNC + cartella)
+wrapper/pptx-open       apre un .pptx in PowerPoint reale (seamless RDP / desktop / VNC)
 wrapper/vm/             helper dentro la VM (open-file.bat)
 tests/ + wrapper/tests/ suite di test bats
 winapps-baseline/       deck di test, PNG di riferimento nativi, font
@@ -192,9 +196,9 @@ docs/                   guida deploy, guida wrapper, TEST_MATRIX, ADR
 | Ambiente Windows + Office (container, VNC/RDP) | ✅ funzionante |
 | Provisioning automatico (trusted folder, sessione, Office, prompt killer) | ✅ funzionante |
 | Gate di fedeltà (13 deck / 25 slide) | ✅ 21 byte-identiche, 4 solo AA |
-| Wrapper CLI `pptx-open` | ✅ implementato, 33 test verdi |
-| Seamless RAIL (FreeRDP RemoteApp) | ⏳ pianificato |
-| CI (shellcheck + bats) | ⏳ pianificato |
+| Wrapper CLI `pptx-open` | ✅ seamless RDP (default) + desktop + VNC, 34 test verdi |
+| Seamless RAIL (FreeRDP RemoteApp) | ✅ implementato (modalità default) |
+| CI (shellcheck + bats) | ✅ workflow committato (`.github/workflows/ci.yml`) |
 | Esplorazione Wine | 💤 opzionale, non intrapresa |
 
 ## Documentazione
@@ -215,7 +219,7 @@ Questo progetto sta sulle spalle di altri. In ordine di importanza:
 | [**dockur/windows**](https://github.com/dockur/windows) | Il container Windows-in-Docker (QEMU/KVM) che è il nostro backend, e l'aggancio di provisioning OEM/`install.bat`. |
 | [**WinApps**](https://github.com/winapps-org/winapps) | L'idea di eseguire applicazioni Windows *vere* su Linux via FreeRDP; la nostra baseline di Fase 1 e la roadmap seamless. |
 | [**qemus/qemu**](https://github.com/qemus/qemu) | Il layer QEMU-in-Docker su cui si appoggia `dockur/windows`. |
-| [**FreeRDP**](https://github.com/FreeRDP/FreeRDP) | Il client RDP usato per parlare con la VM (e, in futuro, per il RemoteApp seamless). |
+| [**FreeRDP**](https://github.com/FreeRDP/FreeRDP) | Il client RDP usato per l'integrazione seamless RemoteApp e per l'accesso desktop completo. |
 | [**noVNC**](https://github.com/novnc/noVNC) | Il visualizzatore VNC web servito sulla porta 8006. |
 | [**Microsoft Office Deployment Tool**](https://learn.microsoft.com/microsoft-365-apps/deploy/office-deployment-tool-configuration-options) | Il modo ufficiale e supportato per installare Office in modo automatico. |
 

@@ -1,8 +1,11 @@
 # Task List — pptx-open (365alFly)
 
-Stato del progetto: 🚧 Fase 0 in corso. Aggiorna le checkbox solo quando il
-task è verificato (acceptance criteria + Definition of Done + gate di
-fedeltà dove indicato).
+Stato del progetto: 🚀 Fase 1 chiusa (gate di fedeltà 21/25 byte-identiche),
+Fase 2 in corso. Aggiorna le checkbox solo quando il task è verificato
+(acceptance criteria + Definition of Done + gate di fedeltà dove indicato).
+
+> CI: `.github/workflows/ci.yml` (shellcheck + bats) è versionato e partirà su
+> push/PR quando la repo diventerà pubblica.
 
 ## Phase 0 — Intake environmentale
 
@@ -81,6 +84,12 @@ fedeltà dove indicato).
     (`nagkiller.vbs` in Startup + Run). Bug trovato dal test: commento inline
     in `.env` (`WINDOWS_VERSION`) rompeva `VERSION` → rimosso e bloccato da un
     test dedicato.
+  - Riepilogo 2026-09-24: provisioning verificato e funzionante (Windows 11
+    LTSC, Office installato via ODT, OEM trust/sessione/RemoteApp, prompt
+    killer). Validati RDP full-desktop e RemoteApp/RAIL (ora modalità default
+    del wrapper). Font Manrope installati via `deploy/oem/fonts/`. Resta aperta
+    solo la licenza/attivazione Office (non disponibile → trial/non attivato;
+    non blocca il gate di fedeltà).
 - [x] Task 5: Primo end-to-end "apertura semplice"
   - Acceptance: una slide semplice della matrice apre via WinApps; screenshot
     catturato; confronto col riferimento nativo.
@@ -122,7 +131,7 @@ fedeltà dove indicato).
   - Files: `wrapper/`, `wrapper/tests/`.
   - Volume: S.
   - FATTO: contratto in `docs/wrapper.md`; `--no-wait/--kill/--timeout/--status`;
-    exit 0/1/2; 8 test bats.
+    exit 0/1/2; 9 test bats.
 - [x] Task 9: Implementazione wrapper
   - Acceptance: `pptx-open file.pptx` avvia/riusa VM, apre seamless,
     attende chiusura, sincronizza `.pptx`, fa cleanup. shellcheck pulito,
@@ -130,8 +139,9 @@ fedeltà dove indicato).
   - Verify: `shellcheck wrapper/*.sh`; `bats wrapper/tests/`.
   - Files: `wrapper/`, `wrapper/tests/`.
   - Volume: M.
-  - FATTO: implementato su VNC+cartella condivisa (non RAIL, vedi
-    `docs/wrapper.md`). shellcheck pulito, 8/8 bats.
+  - FATTO: implementato in tre modi — seamless RDP RemoteApp (default),
+    desktop RDP (`--desktop`), VNC + cartella condivisa (`--vnc`); vedi
+    `docs/wrapper.md`. shellcheck pulito, 9/9 bats.
 - [ ] Task 10: Test "explode" end-to-end
   - Acceptance: open → modifica → salva → chiudi → file aggiornato su host →
     ambiente rimosso → ri-apertura pulita.
