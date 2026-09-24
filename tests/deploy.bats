@@ -88,6 +88,35 @@ EOF
   [[ "$output" == *"non riconosciuta"* ]]
 }
 
+@test "init --web-port crea .env con la porta scelta" {
+  deploy init --web-port 9000
+  [ "$status" -eq 0 ]
+  grep -q '^WEB_PORT=9000$' "$PPTX_ENV_FILE"
+}
+
+@test "init --web-port aggiorna solo la porta su .env esistente" {
+  deploy init
+  local pw_before pw_after
+  pw_before="$(sed -n 's/^VM_PASSWORD=//p' "$PPTX_ENV_FILE")"
+  deploy init --web-port 9100
+  [ "$status" -eq 0 ]
+  grep -q '^WEB_PORT=9100$' "$PPTX_ENV_FILE"
+  pw_after="$(sed -n 's/^VM_PASSWORD=//p' "$PPTX_ENV_FILE")"
+  [ "$pw_before" = "$pw_after" ]
+}
+
+@test "init rifiuta una porta non valida" {
+  deploy init --web-port 70000
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"porta"* || "$output" == *"WEB_PORT"* ]]
+  [ ! -f "$PPTX_ENV_FILE" ]
+}
+
+@test "init --web-port senza valore fallisce" {
+  deploy init --web-port
+  [ "$status" -ne 0 ]
+}
+
 # --- office-config ----------------------------------------------------------
 
 @test "office-config senza .env fallisce con messaggio chiaro" {
@@ -223,6 +252,23 @@ SHARED_DIR=$custom"
   deploy reset --yes
   [ "$status" -eq 0 ]
   [[ "$output" == *"down --volumes"* ]]
+}
+
+@test "redeploy richiede --yes" {
+  install_fake_docker
+  write_env $'OFFICE_EDITION=o365'
+  deploy redeploy
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"--yes"* ]]
+}
+
+@test "redeploy --yes distrugge il volume e riavvia" {
+  install_fake_docker
+  write_env $'OFFICE_EDITION=o365'
+  deploy redeploy --yes
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"down --volumes"* ]]
+  [[ "$output" == *"up -d"* ]]
 }
 
 @test "doctor fallisce se docker è assente ma riporta KVM" {

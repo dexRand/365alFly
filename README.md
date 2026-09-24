@@ -116,8 +116,12 @@ Handy commands:
 scripts/pptx-deploy.sh status        # is the VM running?
 scripts/pptx-deploy.sh logs          # follow boot/provisioning output
 scripts/pptx-deploy.sh down          # stop the VM (data is kept)
-scripts/pptx-deploy.sh reset --yes   # destroy the VM entirely (disposable)
+scripts/pptx-deploy.sh redeploy --yes   # destroy and recreate from scratch (resets the Office trial)
+scripts/pptx-deploy.sh reset --yes      # destroy the VM entirely (disposable)
 ```
+
+`init` (and `setup.sh`) accept `--web-port PORT` to change the web UI port; the
+default is 8006.
 
 > `setup.sh` detects the distribution (Arch, Debian/Ubuntu, Fedora) and skips
 > packages that are already installed; it is safe to run more than once.

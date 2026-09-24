@@ -16,15 +16,20 @@ set -Eeuo pipefail
 
 SCRIPT_NAME="${0##*/}"
 readonly SCRIPT_NAME
+ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly ROOT_DIR
 
 # Override per test/ambienti particolari.
 DOCKER_BIN="${PPTX_DOCKER_BIN:-docker}"
 FREERDP_BIN="${PPTX_FREERDP_BIN:-xfreerdp3}"
 KVM_DEV="${PPTX_KVM_DEV:-/dev/kvm}"
+DEPLOY_SCRIPT="${PPTX_DEPLOY_SCRIPT:-$ROOT_DIR/scripts/pptx-deploy.sh}"
+NO_SYS="${PPTX_SETUP_NO_SYS:-0}"
 
 MODE="install"   # install | check | dry-run
 WITH_DEV=0
 ASSUME_YES=0
+WEB_PORT=""
 
 log()  { printf '%s\n' "$*" >&2; }
 warn() { printf 'attenzione: %s\n' "$*" >&2; }
@@ -45,6 +50,7 @@ Opzioni:
   --check       verifica senza installare (exit 1 se manca qualcosa)
   --dry-run     mostra le azioni previste, senza eseguirle
   --with-dev    installa anche shellcheck e bats (sviluppo/test)
+  --web-port N  imposta la porta della web UI in deploy/.env (default 8006)
   --yes, -y     non chiedere conferma
   -h, --help    questo messaggio
 
@@ -55,6 +61,7 @@ Variabili:
   PPTX_SETUP_OS_ID            forza l'ID distro (es. arch, debian, fedora)
   PPTX_SETUP_OS_LIKE          forza ID_LIKE
   PPTX_SETUP_FREERDP_FALLBACKS client FreeRDP alternativi (default: xfreerdp wlfreerdp3)
+  PPTX_SETUP_NO_SYS=1         non modificare servizio/gruppo docker (solo test)
 
 Dopo il setup:
   scripts/pptx-deploy.sh init && scripts/pptx-deploy.sh up
@@ -64,6 +71,14 @@ EOF
 # --- rilevamento host -------------------------------------------------------
 
 have_cmd() { command -v "$1" >/dev/null 2>&1; }
+
+# Porta TCP valida (1-65535).
+validate_port() {
+  case "$1" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  [ "$1" -ge 1 ] && [ "$1" -le 65535 ]
+}
 
 find_freerdp() {
   local first="$FREERDP_BIN" c fallbacks
@@ -270,6 +285,9 @@ main() {
       --check)    MODE="check" ;;
       --dry-run)  MODE="dry-run" ;;
       --with-dev) WITH_DEV=1 ;;
+      --web-port)
+        [ "$#" -ge 2 ] || { printf -- '--web-port richiede un valore\n' >&2; usage >&2; exit 2; }
+        WEB_PORT="$2"; shift ;;
       --yes|-y)   ASSUME_YES=1 ;;
       -h|--help)  usage; exit 0 ;;
       *)
@@ -280,6 +298,10 @@ main() {
     esac
     shift
   done
+
+  if [ -n "$WEB_PORT" ] && ! validate_port "$WEB_PORT"; then
+    die "porta non valida: '$WEB_PORT' (attesa 1-65535)"
+  fi
 
   # In --check non serve conoscere il package manager.
   if [ "$MODE" = "check" ]; then
@@ -328,10 +350,24 @@ main() {
     log "Nessun pacchetto da installare."
   fi
 
-  ensure_docker_service
-  ensure_docker_group
+  if [ "$NO_SYS" -eq 1 ]; then
+    log "PPTX_SETUP_NO_SYS=1: salto servizio/gruppo docker"
+  else
+    ensure_docker_service
+    ensure_docker_group
+  fi
 
   check_all || warn "alcuni requisiti restano mancanti: vedi sopra"
+
+  if [ -n "$WEB_PORT" ]; then
+    if [ -x "$DEPLOY_SCRIPT" ]; then
+      log "imposto la porta web a $WEB_PORT in deploy/.env..."
+      "$DEPLOY_SCRIPT" init --web-port "$WEB_PORT"
+    else
+      warn "scripts/pptx-deploy.sh non trovato: imposta WEB_PORT=$WEB_PORT in deploy/.env a mano"
+    fi
+  fi
+
   next_steps
 }
 

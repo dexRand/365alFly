@@ -44,6 +44,31 @@ setup_script() { run "$SCRIPT" "$@"; }
   [[ "$output" == *"opzione sconosciuta"* ]]
 }
 
+@test "--web-port senza valore: errore (exit 2)" {
+  setup_script --web-port
+  [ "$status" -eq 2 ]
+}
+
+@test "--web-port non valido: errore" {
+  setup_script --web-port 70000
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"porta"* || "$output" == *"WEB_PORT"* ]]
+}
+
+@test "--web-port delega la porta a pptx-deploy init" {
+  cat > "$TMP/bin/fake-deploy" <<'EOF'
+#!/usr/bin/env bash
+printf 'DEPLOY %s\n' "$*"
+exit 0
+EOF
+  chmod +x "$TMP/bin/fake-deploy"
+  export PPTX_DEPLOY_SCRIPT="$TMP/bin/fake-deploy"
+  export PPTX_SETUP_NO_SYS=1
+  setup_script --web-port 9000
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"DEPLOY init --web-port 9000"* ]]
+}
+
 # --- --check ----------------------------------------------------------------
 
 @test "--check con tutto presente esce 0" {

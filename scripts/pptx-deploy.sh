@@ -55,13 +55,19 @@ Uso: $SCRIPT_NAME <comando> [opzioni]
 Ambiente Windows + Microsoft PowerPoint reale (dockur/windows) per pptx-open.
 
 Comandi:
-  init [--force]   Crea deploy/.env dal template con una password casuale.
+  init [--force] [--web-port PORT]
+                   Crea deploy/.env dal template con una password casuale.
+                   --web-port sceglie la porta della web UI (default 8006);
+                   su .env esistente aggiorna solo la porta, senza rigenerare
+                   la password.
   doctor           Verifica i prerequisiti host (KVM, docker, disco, RAM).
   office-config    Genera deploy/oem/office/configuration.xml da .env.
   prepare          Prepara la cartella OEM (config Office + font).
   up               doctor + prepare + avvia la VM in background.
   down             Ferma la VM (i dati restano nel volume).
   reset [--yes]    Ferma la VM ed elimina il volume (perde tutto).
+  redeploy [--yes] reset + up: distrugge container e volume e ricrea da zero
+                   (azzera anche il trial di Windows/Office; ~20-30 min).
   logs             Segue i log del container.
   status           Stato del container.
   url              Stampa gli indirizzi di accesso (VNC web / RDP).
@@ -93,15 +99,49 @@ gen_password() {
   head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | cut -c1-24
 }
 
+# Porta TCP valida (1-65535).
+validate_port() {
+  case "$1" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  [ "$1" -ge 1 ] && [ "$1" -le 65535 ]
+}
+
+# Imposta KEY=VALUE in un file .env esistente (aggiorna la riga o la aggiunge).
+set_env_value() {
+  local file="$1" key="$2" value="$3"
+  if grep -q "^${key}=" "$file"; then
+    sed -i "s|^${key}=.*|${key}=${value}|" "$file"
+  else
+    printf '%s=%s\n' "$key" "$value" >> "$file"
+  fi
+}
+
 cmd_init() {
-  local force=0 arg
-  for arg in "$@"; do
-    case "$arg" in
-      --force|-f) force=1 ;;
-      *) die "init: opzione non riconosciuta: $arg" ;;
+  local force=0 web_port="" arg
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --force|-f) force=1; shift ;;
+      --web-port)
+        [ "$#" -ge 2 ] || die "init: --web-port richiede un valore (es. --web-port 8006)"
+        web_port="$2"; shift 2 ;;
+      --web-port=*) web_port="${1#*=}"; shift ;;
+      *) die "init: opzione non riconosciuta: $1" ;;
     esac
   done
+
+  if [ -n "$web_port" ]; then
+    validate_port "$web_port" || die "init: porta non valida: '$web_port' (attesa 1-65535)"
+  fi
+
+  # .env già presente: senza --force aggiorna solo la porta (se richiesta),
+  # così si può cambiare la porta senza rigenerare le credenziali.
   if [ -e "$ENV_FILE" ] && [ "$force" -ne 1 ]; then
+    if [ -n "$web_port" ]; then
+      set_env_value "$ENV_FILE" WEB_PORT "$web_port"
+      log "aggiornato WEB_PORT=$web_port in $ENV_FILE"
+      return 0
+    fi
     die ".env esiste già ($ENV_FILE); usa --force per sovrascrivere"
   fi
   [ -f "$ENV_EXAMPLE" ] || die "template mancante: $ENV_EXAMPLE"
@@ -113,9 +153,14 @@ cmd_init() {
   sed -e "s|^VM_PASSWORD=.*|VM_PASSWORD=${password}|" \
       -e 's/[[:space:]]\+#.*$//' "$ENV_EXAMPLE" > "$ENV_FILE"
   chmod 600 "$ENV_FILE"
+  if [ -n "$web_port" ]; then
+    set_env_value "$ENV_FILE" WEB_PORT "$web_port"
+  fi
 
+  local port; port="$(env_file_get WEB_PORT)"; port="${port:-8006}"
   log "creato $ENV_FILE (chmod 600)"
   log "utente VM: $(env_file_get VM_USER) — password generata in .env"
+  log "web UI: http://127.0.0.1:${port}/"
   log "prossimo passo: $SCRIPT_NAME up"
 }
 
@@ -368,6 +413,25 @@ cmd_reset() {
   log "ambiente eliminato (volume rimosso)."
 }
 
+# redeploy = distruggi container e volume, poi ricrea da zero.
+# Azzera anche lo stato di attivazione/trial di Windows e Office; richiede di
+# riscaricare la ISO e reinstallare Office (~20-30 min).
+cmd_redeploy() {
+  local assume_yes=0 arg
+  for arg in "$@"; do
+    case "$arg" in
+      --yes|-y) assume_yes=1 ;;
+      *) die "redeploy: opzione non riconosciuta: $arg" ;;
+    esac
+  done
+  if [ "$assume_yes" -ne 1 ]; then
+    die "redeploy distrugge container e volume (azzera Windows/Office e il trial); conferma con: $SCRIPT_NAME redeploy --yes"
+  fi
+  log "redeploy: elimino container e volume (installazione pulita)..."
+  compose_run down --volumes --remove-orphans
+  cmd_up
+}
+
 cmd_logs() {
   compose_run logs --follow --tail 200
 }
@@ -403,6 +467,7 @@ main() {
     up)            cmd_up "$@" ;;
     down)          cmd_down "$@" ;;
     reset)         cmd_reset "$@" ;;
+    redeploy)      cmd_redeploy "$@" ;;
     logs)          cmd_logs "$@" ;;
     status)        cmd_status "$@" ;;
     url)           cmd_url "$@" ;;

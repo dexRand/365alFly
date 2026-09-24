@@ -16,11 +16,13 @@ licenze pilotate da un unico file `.env` locale.
 
 ```bash
 scripts/pptx-deploy.sh init            # crea deploy/.env con password casuale
+scripts/pptx-deploy.sh init --web-port 9000   # scegli la porta della web UI (default 8006)
 scripts/pptx-deploy.sh doctor          # verifica prerequisiti host
 scripts/pptx-deploy.sh up              # prepara l'OEM e avvia la VM
 scripts/pptx-deploy.sh url             # stampa gli indirizzi di accesso
 scripts/pptx-deploy.sh status|logs     # stato / log del container
 scripts/pptx-deploy.sh down            # ferma la VM (dati conservati)
+scripts/pptx-deploy.sh redeploy --yes  # down -v + up: ricrea da zero (reset trial incluso)
 scripts/pptx-deploy.sh reset --yes     # elimina tutto (ambiente disposable)
 ```
 
@@ -34,6 +36,7 @@ In automatico (consigliato):
 
 ```bash
 scripts/setup.sh --with-dev    # verifica e installa solo ciò che manca
+scripts/setup.sh --web-port 9000   # imposta la porta della web UI (default 8006)
 ```
 
 Oppure a mano (Arch / CachyOS):
