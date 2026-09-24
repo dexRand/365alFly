@@ -212,6 +212,7 @@ docs/                   guida deploy, guida wrapper, TEST_MATRIX, ADR
 ## Documentazione
 
 - [`docs/deploy.md`](docs/deploy.md) — guida ambiente e configurazione
+- [`CHANGELOG.md`](CHANGELOG.md) — cronologia delle release
 - [`docs/wrapper.md`](docs/wrapper.md) — contratto e meccanismo della CLI
 - [`docs/TEST_MATRIX.md`](docs/TEST_MATRIX.md) — matrice di fedeltà e verdetto
 - [`docs/adr/`](docs/adr) — decisioni architetturali

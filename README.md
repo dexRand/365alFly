@@ -213,6 +213,7 @@ docs/                   deploy guide, wrapper guide, TEST_MATRIX, ADRs
 ## Documentation
 
 - [`docs/deploy.md`](docs/deploy.md) — environment guide & configuration
+- [`CHANGELOG.md`](CHANGELOG.md) — release history
 - [`docs/wrapper.md`](docs/wrapper.md) — `pptx-open` CLI contract & mechanism
 - [`docs/TEST_MATRIX.md`](docs/TEST_MATRIX.md) — fidelity matrix & verdict
 - [`docs/adr/`](docs/adr) — architecture decisions
