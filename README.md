@@ -183,6 +183,7 @@ native references:
 deploy/                 compose + .env + OEM provisioning (dockur/windows)
 scripts/pptx-deploy.sh  environment CLI: init / doctor / office-config / up / down / reset
 scripts/lib/            shared helpers (safe .env parser)
+scripts/e2e-explode.sh  end-to-end "explode" test (open / edit / save / close)
 wrapper/pptx-open       open a .pptx in real PowerPoint (seamless RDP / desktop / VNC)
 wrapper/vm/             in-VM helper (open-file.bat)
 tests/ + wrapper/tests/ bats test suites
@@ -199,6 +200,7 @@ docs/                   deploy guide, wrapper guide, TEST_MATRIX, ADRs
 | Fidelity gate (13 decks / 25 slides) | ✅ 21 byte-identical, 4 AA-only |
 | `pptx-open` CLI wrapper | ✅ seamless RDP (default) + desktop + VNC, 34 tests green |
 | Seamless RAIL integration (FreeRDP RemoteApp) | ✅ implemented (default mode) |
+| End-to-end "explode" test (real VM) | ✅ `scripts/e2e-explode.sh` green |
 | CI (shellcheck + bats) | ✅ workflow committed (`.github/workflows/ci.yml`) |
 | Wine exploration | 💤 optional, not pursued |
 

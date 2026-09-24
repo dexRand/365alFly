@@ -182,6 +182,7 @@ deck difficili dalla VM e li confronta pixel-per-pixel con i reference nativi:
 deploy/                 compose + .env + provisioning OEM (dockur/windows)
 scripts/pptx-deploy.sh  CLI ambiente: init / doctor / office-config / up / down / reset
 scripts/lib/            helper condivisi (parser .env sicuro)
+scripts/e2e-explode.sh  test "explode" end-to-end (apri / modifica / salva / chiudi)
 wrapper/pptx-open       apre un .pptx in PowerPoint reale (seamless RDP / desktop / VNC)
 wrapper/vm/             helper dentro la VM (open-file.bat)
 tests/ + wrapper/tests/ suite di test bats
@@ -198,6 +199,7 @@ docs/                   guida deploy, guida wrapper, TEST_MATRIX, ADR
 | Gate di fedeltà (13 deck / 25 slide) | ✅ 21 byte-identiche, 4 solo AA |
 | Wrapper CLI `pptx-open` | ✅ seamless RDP (default) + desktop + VNC, 34 test verdi |
 | Seamless RAIL (FreeRDP RemoteApp) | ✅ implementato (modalità default) |
+| Test "explode" end-to-end (VM reale) | ✅ `scripts/e2e-explode.sh` verde |
 | CI (shellcheck + bats) | ✅ workflow committato (`.github/workflows/ci.yml`) |
 | Esplorazione Wine | 💤 opzionale, non intrapresa |
 
