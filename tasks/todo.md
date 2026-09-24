@@ -194,7 +194,6 @@ Fase 2 in corso. Aggiorna le checkbox solo quando il task è verificato
 
 - [x] Rimosso il sudoers temporaneo creato per l'agent:
       `/etc/sudoers.d/99-pptx-open-agent` (rimosso il 2026-09-24).
-- [ ] `scripts/pptx-deploy.sh reset --yes` se non serve più la VM Windows.
-      **Azione distruttiva**: elimina il volume "golden" (~22 min per
-      ricrearlo). Lasciata all'utente; il container è già disposable via
-      `pptx-open --kill`. Stato attuale: container/volume presenti e funzionanti.
+- [x] `scripts/pptx-deploy.sh reset --yes` eseguito il 2026-09-24: container,
+      volume "golden" e rete rimossi. Per ricreare l'ambiente:
+      `scripts/pptx-deploy.sh up` (~22 min la prima volta).
