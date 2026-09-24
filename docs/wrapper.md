@@ -37,7 +37,8 @@ Exit code: `0` ok · `1` errore (file mancante, VM/FreeRDP/helper, timeout) ·
 ### default — seamless RDP RemoteApp (RAIL)
 
 1. avvia la VM se non è attiva (`docker compose up -d`, attende
-   `Windows started successfully`);
+   `Windows started successfully` e poi che la porta RDP risponda: il marker
+   di dockur appare quando parte QEMU, il desktop serve ~30 s in più);
 2. lancia `xfreerdp3` con:
    - `/drive:pptxopen,<cartella del file>` — monta la cartella dell'host come
      drive remoto;
@@ -66,7 +67,9 @@ Niente RDP: usa la stessa VM VNC della baseline e sincronizza via `SHARED_DIR`.
 2. copia l'helper `wrapper/vm/open-file.bat` in `<SHARED_DIR>/o.bat`;
 3. attiva `Z:\o.bat` nella VM via monitor QEMU (`sendkey`: Win+R → `Z:\o.bat`);
    l'helper apre PowerPoint con `start /wait` e, alla chiusura, scrive
-   `Z:\done.txt`;
+   `Z:\done.txt`. Il warning "Open File - Security Warning" che Windows mostra
+   per i `.bat` della condivisione è soppresso da `LowRiskFileTypes`
+   (`deploy/oem/configure-trust.bat`);
 4. il wrapper attende `done.txt` e risincronizza il file sull'host.
 
 L'helper (`wrapper/vm/open-file.bat`) fa: trova `POWERPNT.EXE`, chiude eventuali
@@ -76,7 +79,9 @@ istanze aperte, `start /wait "" POWERPNT.EXE Z:\<file>`, `echo ok> Z:\done.txt`.
 
 Percorsi e binari si possono sovrascrivere con variabili d'ambiente:
 `PPTX_DEPLOY_DIR`, `PPTX_ENV_FILE`, `PPTX_COMPOSE_FILE`, `PPTX_CONTAINER`,
-`PPTX_DOCKER_BIN`, `PPTX_FREERDP_BIN` (default `xfreerdp3`).
+`PPTX_DOCKER_BIN`, `PPTX_FREERDP_BIN` (default `xfreerdp3`),
+`PPTX_VM_HELPER_SRC` (helper `--vnc`; usato dai test e2e),
+`PPTX_GUEST_READY_TIMEOUT` (attesa readiness del guest, default 180 s).
 
 ## Requisiti
 
@@ -90,16 +95,31 @@ Percorsi e binari si possono sovrascrivere con variabili d'ambiente:
 
 ## Test
 
-`bats wrapper/tests/pptx-open.bats` — **9 test** con docker/VM sostituiti da
-stub: file mancante, usage, help, opzione sconosciuta, seamless (verifica di
-`/app:...POWERPNT.EXE`), desktop (nessun `/app`), round-trip `--vnc` con
-sincronizzazione, errore segnalato dalla VM, `--status`.
+- `bats wrapper/tests/pptx-open.bats` — **9 test** con docker/VM sostituiti da
+  stub: file mancante, usage, help, opzione sconosciuta, seamless (verifica di
+  `/app:...POWERPNT.EXE`), desktop (nessun `/app`), round-trip `--vnc` con
+  sincronizzazione, errore segnalato dalla VM, `--status`.
+- `scripts/e2e-explode.sh` — test "explode" end-to-end su VM reale (richiede
+  docker+VM): apre, **modifica**, salva, chiude e verifica che il file host sia
+  cambiato. Vedi `tasks/todo.md` Task 10.
+
+## Disposable e tempi di avvio
+
+Decisione presa sui numeri (Task 7, 2026-09-24): **container disposable per
+sessione, volume "golden" persistente**.
+
+| Scenario | Tempo |
+|---|---|
+| Cold (ricrea tutto: ISO + Office, `down -v` + `up`) | ~22 min |
+| Warm (container ricreato, Windows già nel volume) | ~37 s fino al desktop |
+
+`pptx-open --kill` fa `docker compose down` (container rimosso, volume
+conservato); il `reset` completo costa ~22 min ed è un'azione esplicita.
 
 ## Limiti noti e follow-up
 
 - **`--vnc` con trigger a tastiera**: dipende dal focus/desktop; robusto solo
   con sessione sbloccata (vedi sopra).
 - **`--no-wait`** non sincronizza: il file resta in `inbox/`.
-- **Sequenza "explode" completa** (modifica + salva verificati sull'host,
-  distruzione ambiente, riapertura pulita): ancora da chiudere — vedi
-  `tasks/todo.md` Task 10. L'apertura reale è già verificata.
+- Il trigger a tastiera è intrinsecamente più fragile di RDP; per uso normale
+  preferire la modalità seamless (default).

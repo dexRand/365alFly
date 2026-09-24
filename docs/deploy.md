@@ -81,7 +81,9 @@ eseguito all'ultimo passo dell'installazione:
 
 1. installa i font da `C:\OEM\fonts` (o `Z:\fonts`), necessari al gate Manrope;
 2. se esiste `C:\OEM\office\configuration.xml`, scarica l'ODT e installa Office;
-3. `configure-trust.bat` — `Z:\` trusted location di Office + Protected View off;
+3. `configure-trust.bat` — `Z:\` trusted location di Office + Protected View
+   off + `LowRiskFileTypes` (nessun warning ShellExecute sui `.bat`/`.cmd`
+   eseguiti dalla condivisione, usati dal trigger del wrapper);
 4. `configure-session.bat` — screen saver/sospensione off (il wrapper usa la
    tastiera: una sessione bloccata intercetterebbe i tasti);
 5. `configure-office.bat` — spegne l'onboarding di primo avvio di Office;

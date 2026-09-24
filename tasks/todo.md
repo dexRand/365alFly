@@ -115,15 +115,22 @@ Fase 2 in corso. Aggiorna le checkbox solo quando il task è verificato
 
 ## Phase 2 — Wrapper disposable `pptx-open`
 
-- [ ] Task 7: Misura boot cold vs warm
+- [x] Task 7: Misura boot cold vs warm
   - Acceptance: tempi reali misurati e riportati; decisione
     persistente-disposable presa con i dati.
   - Verify: numeri in `tasks/plan.md` o `docs/`.
   - Files: `docs/`, `tasks/plan.md`.
   - Volume: S.
-  - Stato: osservazione preliminare — cold (prima installazione Windows+Office)
-    30–60 min; warm (container ricreato, Windows già su disco) ~30–60 s fino a
-    "Windows started successfully". Misura precisa da fare.
+  - MISURATO 2026-09-24:
+    - **cold** (ambiente ricreato da zero, `down -v` + `up`, ISO+Office):
+      ~**22 min** (misura reale 2026-09-23, vedi Task 4).
+    - **warm** (container ricreato, Windows già nel volume): **~37 s** fino al
+      desktop utilizzabile (marker dockur "Windows started successfully" a
+      ~10 s + ~27 s per OS/RDP). Misurato con probe funzionale.
+  - DECISIONE: **container disposable per sessione, volume "golden"
+    persistente**. `pptx-open --kill` fa `compose down` (container rimosso,
+    ~37 s a riavvio); il `down -v` completo costa ~22 min e va riservato al
+    reset esplicito. Attivazione/licenza Office restano nel volume, mai in repo.
 - [x] Task 8: Contratto CLI `pptx-open`
   - Acceptance: flag, exit code, messaggi d'errore, lock definiti e
     testati (bats).
@@ -142,36 +149,52 @@ Fase 2 in corso. Aggiorna le checkbox solo quando il task è verificato
   - FATTO: implementato in tre modi — seamless RDP RemoteApp (default),
     desktop RDP (`--desktop`), VNC + cartella condivisa (`--vnc`); vedi
     `docs/wrapper.md`. shellcheck pulito, 9/9 bats.
-- [ ] Task 10: Test "explode" end-to-end
+- [x] Task 10: Test "explode" end-to-end
   - Acceptance: open → modifica → salva → chiudi → file aggiornato su host →
     ambiente rimosso → ri-apertura pulita.
   - Verify: sequenza documentata e green.
   - Files: `wrapper/tests/`, `docs/`.
   - Volume: M.
-  - Parziale: apertura reale verificata (PowerPoint apre il deck da `Z:\`) e
-    helper verificato (alla chiusura scrive `done.txt=ok`); sincronizzazione
-    coperta da test bats. Manca la sequenza completa modifica+salva sull'host.
+  - FATTO 2026-09-24: script riproducibile `scripts/e2e-explode.sh` (helper
+    in-VM `scripts/e2e/` con PowerPoint COM). Sequenza verificata:
+    1. open→edit→save→close: SHA del file host cambiato e marker
+       `E2E-OK-365alFly` presente dentro il `.pptx` salvato;
+    2. `docker compose down`: container rimosso, volume "golden" conservato;
+    3. il file host sopravvive (SHA invariato);
+    4. `up` (~37 s) + riapertura pulita: e2e di nuovo verde.
+    Difetti trovati e corretti durante il test (vedi commit):
+    - trigger `Z:\o.bat` bloccato dal warning di sicurezza → `LowRiskFileTypes`
+      nel provisioning (`deploy/oem/configure-trust.bat`);
+    - `ensure_vm` considerava pronta la VM al marker QEMU (~10 s) mentre il
+      desktop serve ~37 s → aggiunta `wait_guest_ready` (porta RDP).
 
 **Checkpoint 2:**
-- [ ] `pptx-open` end-to-end funzionante (Fase 3 piano strategico)
-- [ ] Nessun container/VM morti accumulati
-- [ ] Decisione persistente/disposable documentata
+- [x] `pptx-open` end-to-end funzionante (Fase 3 piano strategico) — e2e explode
+      verde (`scripts/e2e-explode.sh`)
+- [x] Nessun container/VM morti accumulati — un solo container/volume gestito
+- [x] Decisione persistente/disposable documentata (Task 7: disposable per
+      sessione, volume golden persistente)
 
 ## Phase 3 — Wine (condizionale)
 
-- [ ] Task 11 (condizionale): POC Wine solo se blocco concreto in Fase 2
+- [x] Task 11 (condizionale): POC Wine solo se blocco concreto in Fase 2
   - Acceptance: stesso gate di fedeltà; time-box di poche ore; report onesto.
   - Files: `wine-poc/`.
   - Volume: L.
+  - NON ATTIVATO: la Fase 2 è completata con WinApps/RDP senza blocchi
+    concreti; la condizione di ingresso non si è verificata. Wine resta
+    l'opzione esplorativa in coda, mai la strada primaria.
 
 ## Verifica finale (docs/ACCEPTANCE.md)
 
-- [ ] Tutti i criteri di accettazione finali spuntati con evidenze.
+- [x] Tutti i criteri di accettazione finali spuntati con evidenze
+      (vedi `docs/ACCEPTANCE.md`).
 
 ## Cleanup a fine progetto (robaccia lasciata sull'host)
 
-- [ ] Rimuovere il sudoers temporaneo creato per l'agent:
-      `sudo rm /etc/sudoers.d/99-pptx-open-agent`
-      (era stato aggiunto il 2026-09-23 per evitare i prompt polkit durante il
-      provisioning; va togliato quando il progetto è finito.)
+- [x] Rimosso il sudoers temporaneo creato per l'agent:
+      `/etc/sudoers.d/99-pptx-open-agent` (rimosso il 2026-09-24).
 - [ ] `scripts/pptx-deploy.sh reset --yes` se non serve più la VM Windows.
+      **Azione distruttiva**: elimina il volume "golden" (~22 min per
+      ricrearlo). Lasciata all'utente; il container è già disposable via
+      `pptx-open --kill`. Stato attuale: container/volume presenti e funzionanti.

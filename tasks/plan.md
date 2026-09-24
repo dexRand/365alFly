@@ -87,9 +87,10 @@ screenshot della matrice in `docs/TEST_MATRIX.md`, non su "si apre".
   ambiente rimosso → seconda apertura pulita.
 
 **Checkpoint 2:**
-- [ ] `pptx-open` funziona end-to-end (Fase 3 del piano strategico)
-- [ ] Nessun container/VM morti accumulati
-- [ ] Decisione persistente/disposable documentata con i numeri di boot
+- [x] `pptx-open` funziona end-to-end (Fase 3 del piano strategico)
+- [x] Nessun container/VM morti accumulati
+- [x] Decisione persistente/disposable documentata con i numeri di boot
+      (cold ~22 min / warm ~37 s)
 
 ### Phase 3 — Wine (solo se serve, non fallback primario)
 
