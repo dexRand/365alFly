@@ -176,10 +176,10 @@ check_all() {
 
   if [ "$failures" -eq 0 ]; then
     echo "  Esito: host pronto."
-  else
-    echo "  Esito: $failures requisito/i mancante/i."
+    return 0
   fi
-  return "$failures"
+  echo "  Esito: $failures requisito/i mancante/i."
+  return 1
 }
 
 # Elenca i pacchetti mancanti secondo le capability, in base ai pkg_* correnti.
