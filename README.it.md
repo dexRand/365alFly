@@ -10,7 +10,7 @@
 ![Piattaforma](https://img.shields.io/badge/platform-Linux-1793d1?logo=linux&logoColor=white)
 ![Backend](https://img.shields.io/badge/backend-dockur%2Fwindows-2496ED?logo=docker&logoColor=white)
 ![Office](https://img.shields.io/badge/PowerPoint-real-D24726?logo=microsoftpowerpoint&logoColor=white)
-![Test](https://img.shields.io/badge/tests-34%20passing-2ea44f)
+![Test](https://img.shields.io/badge/tests-45%20passing-2ea44f)
 ![Licenza](https://img.shields.io/badge/license-MIT-blue)
 
 ---
@@ -77,9 +77,14 @@ credenziali, risorse, rete e licenze. Nessun segreto viene mai committato.
 ## Requisiti
 
 - Linux con KVM (`/dev/kvm` presente e scrivibile)
-- Docker (o Docker Desktop / Podman con supporto KVM)
+- Docker (o Docker Desktop / Podman con supporto KVM) + Compose
+- FreeRDP 3 (`xfreerdp3`) per le modalità seamless e desktop
+- Un display server: X11, oppure Wayland con XWayland. Senza display locale,
+  usa la modalità web-VNC da browser
 - ~8 GB di RAM e ~40 GB di disco libero
 - Un trial Microsoft 365 **oppure** una product key per attivare Office (vedi sotto)
+
+`scripts/setup.sh` verifica tutto quanto sopra e installa solo ciò che manca.
 
 ## Avvio rapido
 
@@ -87,19 +92,19 @@ credenziali, risorse, rete e licenze. Nessun segreto viene mai committato.
 git clone https://github.com/dexRand/365alFly.git
 cd 365alFly
 
-# prerequisiti host (Arch / CachyOS)
-sudo pacman -S --needed docker
-sudo systemctl enable --now docker
-sudo usermod -aG docker "$USER"        # poi logout e nuovo login
+# 1. prerequisiti host: docker, docker compose, FreeRDP; verifica KVM
+scripts/setup.sh                 # installa solo ciò che manca (Arch/Debian/Fedora)
+scripts/setup.sh --check         # solo verifica, nessuna modifica
+scripts/setup.sh --with-dev      # aggiunge anche shellcheck + bats
 
-# bootstrap e avvio
-scripts/pptx-deploy.sh init            # crea deploy/.env con password casuale
-scripts/pptx-deploy.sh up              # primo avvio: ~30–60 min (scarica Windows + Office)
-scripts/pptx-deploy.sh url             # apri l'URL stampato nel browser
+# 2. bootstrap e avvio
+scripts/pptx-deploy.sh init      # crea deploy/.env con password casuale
+scripts/pptx-deploy.sh up        # primo avvio: ~30-60 min (scarica Windows + Office)
+scripts/pptx-deploy.sh url       # apri l'URL stampato nel browser
 ```
 
-> Su Debian/Ubuntu il pacchetto del motore è `docker.io`. Su altre distro
-> installa `docker` + il plugin Compose.
+> `setup.sh` rileva la distribuzione e salta i pacchetti già presenti; puoi
+> eseguirlo più volte senza problemi.
 
 Il primo `up` scarica la ISO Windows (~4,7 GB) e installa Office dal CDN di
 Microsoft (~2 GB). È un costo una tantum: il sistema installato vive in un
@@ -180,6 +185,7 @@ deck difficili dalla VM e li confronta pixel-per-pixel con i reference nativi:
 
 ```
 deploy/                 compose + .env + provisioning OEM (dockur/windows)
+scripts/setup.sh        setup host: verifica e installa i prerequisiti mancanti
 scripts/pptx-deploy.sh  CLI ambiente: init / doctor / office-config / up / down / reset
 scripts/lib/            helper condivisi (parser .env sicuro)
 scripts/e2e-explode.sh  test "explode" end-to-end (apri / modifica / salva / chiudi)
@@ -194,14 +200,14 @@ docs/                   guida deploy, guida wrapper, TEST_MATRIX, ADR
 
 | Area | Stato |
 |---|---|
-| Ambiente Windows + Office (container, VNC/RDP) | ✅ funzionante |
-| Provisioning automatico (trusted folder, sessione, Office, prompt killer) | ✅ funzionante |
-| Gate di fedeltà (13 deck / 25 slide) | ✅ 21 byte-identiche, 4 solo AA |
-| Wrapper CLI `pptx-open` | ✅ seamless RDP (default) + desktop + VNC, 34 test verdi |
-| Seamless RAIL (FreeRDP RemoteApp) | ✅ implementato (modalità default) |
-| Test "explode" end-to-end (VM reale) | ✅ `scripts/e2e-explode.sh` verde |
-| CI (shellcheck + bats) | ✅ workflow committato (`.github/workflows/ci.yml`) |
-| Esplorazione Wine | 💤 opzionale, non intrapresa |
+| Ambiente Windows + Office (container, VNC/RDP) | funzionante |
+| Provisioning automatico (trusted folder, sessione, Office, prompt killer) | funzionante |
+| Gate di fedeltà (13 deck / 25 slide) | 21 byte-identiche, 4 solo AA |
+| Wrapper CLI `pptx-open` | seamless RDP (default) + desktop + VNC, 45 test verdi |
+| Seamless RAIL (FreeRDP RemoteApp) | implementato (modalità default) |
+| Test "explode" end-to-end (VM reale) | `scripts/e2e-explode.sh` verde |
+| CI (shellcheck + bats) | workflow committato (`.github/workflows/ci.yml`) |
+| Esplorazione Wine | opzionale, non intrapresa |
 
 ## Documentazione
 

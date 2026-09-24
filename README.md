@@ -9,7 +9,7 @@
 ![Platform](https://img.shields.io/badge/platform-Linux-1793d1?logo=linux&logoColor=white)
 ![Backend](https://img.shields.io/badge/backend-dockur%2Fwindows-2496ED?logo=docker&logoColor=white)
 ![Office](https://img.shields.io/badge/PowerPoint-real-D24726?logo=microsoftpowerpoint&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-34%20passing-2ea44f)
+![Tests](https://img.shields.io/badge/tests-45%20passing-2ea44f)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 ---
@@ -77,9 +77,14 @@ ever committed.
 ## Requirements
 
 - Linux with KVM (`/dev/kvm` present and writable)
-- Docker (or Docker Desktop / Podman with KVM support)
+- Docker (or Docker Desktop / Podman with KVM support) plus Compose
+- FreeRDP 3 (`xfreerdp3`) for the seamless and desktop modes
+- A display server: X11, or Wayland with XWayland. Without a local display,
+  use the web-VNC mode from a browser
 - ~8 GB RAM and ~40 GB free disk
 - A Microsoft 365 trial **or** a product key for Office activation (see below)
+
+`scripts/setup.sh` checks all of the above and installs only what is missing.
 
 ## Quick start
 
@@ -87,19 +92,19 @@ ever committed.
 git clone https://github.com/dexRand/365alFly.git
 cd 365alFly
 
-# host prerequisites (Arch / CachyOS)
-sudo pacman -S --needed docker
-sudo systemctl enable --now docker
-sudo usermod -aG docker "$USER"        # then log out and back in
+# 1. host prerequisites: docker, docker compose, FreeRDP; verifies KVM
+scripts/setup.sh                 # installs only what is missing (Arch/Debian/Fedora)
+scripts/setup.sh --check         # report only, no changes
+scripts/setup.sh --with-dev      # also install shellcheck + bats
 
-# bootstrap and start
-scripts/pptx-deploy.sh init            # creates deploy/.env with a random password
-scripts/pptx-deploy.sh up              # first run: ~30–60 min (downloads Windows + Office)
-scripts/pptx-deploy.sh url             # open the printed URL in your browser
+# 2. bootstrap and start
+scripts/pptx-deploy.sh init      # creates deploy/.env with a random password
+scripts/pptx-deploy.sh up        # first run: ~30-60 min (downloads Windows + Office)
+scripts/pptx-deploy.sh url       # open the printed URL in your browser
 ```
 
-> On Debian/Ubuntu the engine package is `docker.io`. On other distros install
-> `docker` + the Compose plugin.
+> `setup.sh` detects the distribution and skips packages that are already
+> installed; it is safe to run it more than once.
 
 The first `up` downloads the Windows ISO (~4.7 GB) and installs Office from
 Microsoft's CDN (~2 GB). It is a one-time cost: the installed system lives in a
@@ -181,6 +186,7 @@ native references:
 
 ```
 deploy/                 compose + .env + OEM provisioning (dockur/windows)
+scripts/setup.sh        host setup: checks and installs missing prerequisites
 scripts/pptx-deploy.sh  environment CLI: init / doctor / office-config / up / down / reset
 scripts/lib/            shared helpers (safe .env parser)
 scripts/e2e-explode.sh  end-to-end "explode" test (open / edit / save / close)
@@ -195,14 +201,14 @@ docs/                   deploy guide, wrapper guide, TEST_MATRIX, ADRs
 
 | Area | Status |
 |---|---|
-| Windows + Office environment (container, VNC/RDP) | ✅ working |
-| Auto-provisioning (trusted folder, session, Office, prompt killer) | ✅ working |
-| Fidelity gate (13 decks / 25 slides) | ✅ 21 byte-identical, 4 AA-only |
-| `pptx-open` CLI wrapper | ✅ seamless RDP (default) + desktop + VNC, 34 tests green |
-| Seamless RAIL integration (FreeRDP RemoteApp) | ✅ implemented (default mode) |
-| End-to-end "explode" test (real VM) | ✅ `scripts/e2e-explode.sh` green |
-| CI (shellcheck + bats) | ✅ workflow committed (`.github/workflows/ci.yml`) |
-| Wine exploration | 💤 optional, not pursued |
+| Windows + Office environment (container, VNC/RDP) | working |
+| Auto-provisioning (trusted folder, session, Office, prompt killer) | working |
+| Fidelity gate (13 decks / 25 slides) | 21 byte-identical, 4 AA-only |
+| `pptx-open` CLI wrapper | seamless RDP (default) + desktop + VNC, 45 tests green |
+| Seamless RAIL integration (FreeRDP RemoteApp) | implemented (default mode) |
+| End-to-end "explode" test (real VM) | `scripts/e2e-explode.sh` green |
+| CI (shellcheck + bats) | workflow committed (`.github/workflows/ci.yml`) |
+| Wine exploration | optional, not pursued |
 
 ## Documentation
 

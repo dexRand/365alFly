@@ -1,6 +1,6 @@
 # Task List — pptx-open (365alFly)
 
-Stato del progetto: 🚀 Fase 1 chiusa (gate di fedeltà 21/25 byte-identiche),
+Stato del progetto: Fase 1 chiusa (gate di fedeltà 21/25 byte-identiche),
 Fase 2 in corso. Aggiorna le checkbox solo quando il task è verificato
 (acceptance criteria + Definition of Done + gate di fedeltà dove indicato).
 

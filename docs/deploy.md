@@ -28,10 +28,18 @@ Al primo `up`: download ISO Windows (~4,7 GB per `11l`), installazione
 automatica, poi `install.bat` scarica l'Office Deployment Tool e installa
 Office (~2 GB). Tempo tipico: 30–60 minuti, una sola volta (poi sta nel volume).
 
-## Prerequisiti host (Arch / CachyOS)
+## Prerequisiti host
+
+In automatico (consigliato):
 
 ```bash
-sudo pacman -S --needed docker qemu-full freerdp shellcheck bats
+scripts/setup.sh --with-dev    # verifica e installa solo ciò che manca
+```
+
+Oppure a mano (Arch / CachyOS):
+
+```bash
+sudo pacman -S --needed docker docker-compose freerdp shellcheck bats
 sudo systemctl enable --now docker
 sudo usermod -aG docker "$USER"    # richiede un nuovo login
 ```

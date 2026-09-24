@@ -39,10 +39,10 @@ su qualunque backend disponibile e su qualunque display:
 
 | Requisito WinApps/FreeRDP | Stato qui | Azione |
 |---|---|---|
-| `/dev/kvm` (nested virt) | ✅ presente | — |
-| Engine container (Docker/Podman) | ✅ Docker | — |
-| Client FreeRDP | ❌ assente | `sudo apt install freerdp2-x11` |
-| Display X11/Wayland | ✅ WSLg | — |
+| `/dev/kvm` (nested virt) | presente | — |
+| Engine container (Docker/Podman) | Docker | — |
+| Client FreeRDP | assente | `sudo apt install freerdp2-x11` |
+| Display X11/Wayland | WSLg | — |
 | gold image / licenza Office | non ancora | Task 4 (Fase 1) |
 | ISO Windows | non ancora | Task 2/4 |
 
@@ -89,7 +89,7 @@ Link: https://github.com/winapps-org/winapps .
 - **Dipendenze Ubuntu** (comando ufficiale README §Step 2):
   `sudo apt install -y curl dialog freerdp3-x11 git iproute2 libnotify-bin netcat-openbsd`
 - **FreeRDP ≥ 3 richiesto**; su Ubuntu 24.04 `freerdp3-x11` = 3.31.0 nei
-  repo ufficiali (verificato con `apt-cache policy`). ✅
+  repo ufficiali (verificato con `apt-cache policy`).
 - **Config**: `~/.config/winapps/winapps.conf` con `RDP_USER`/`RDP_PASS`/
   `WAFLAVOR`; file `chmod 600`; `RDP_ASKPASS` per non passare la password
   sulla riga di comando. Nota: FreeRDP ≥ 3.9 **impone** password.
@@ -101,7 +101,7 @@ Link: https://github.com/winapps-org/winapps .
 ### Checklist installazione qui
 
 - [ ] `apt install freerdp3-x11 dialog libnotify-bin netcat-openbsd iproute2 curl git`
-      (freerdp3 verifica ✅; serve sudo dell'utente)
+      (freerdp3 verificato; serve sudo dell'utente)
 - [ ] Installare strumenti dev: `shellcheck bats unzip cpu-checker`
 - [ ] Config `~/.config/winapps/winapps.conf` (Template in README §Step 3)
 - [ ] Office/ISO Windows + licenza valida (vedi blocco sotto)
