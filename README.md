@@ -88,27 +88,37 @@ ever committed.
 
 ## Quick start
 
+Bring up the environment:
+
 ```bash
 git clone https://github.com/dexRand/365alFly.git
 cd 365alFly
 
-# 1. host prerequisites: docker, docker compose, FreeRDP; verifies KVM
-scripts/setup.sh                 # installs only what is missing (Arch/Debian/Fedora)
-scripts/setup.sh --check         # report only, no changes
-scripts/setup.sh --with-dev      # also install shellcheck + bats
-
-# 2. bootstrap and start
-scripts/pptx-deploy.sh init      # creates deploy/.env with a random password
-scripts/pptx-deploy.sh up        # first run: ~30-60 min (downloads Windows + Office)
-scripts/pptx-deploy.sh url       # open the printed URL in your browser
+scripts/setup.sh              # 1. host prerequisites (installs only what is missing)
+scripts/pptx-deploy.sh init   # 2. create deploy/.env with a random password
+scripts/pptx-deploy.sh up     # 3. start the VM
+scripts/pptx-deploy.sh url    # 4. open the printed URL: http://127.0.0.1:8006/
 ```
 
-> `setup.sh` detects the distribution and skips packages that are already
-> installed; it is safe to run it more than once.
+The first `up` downloads Windows (~4.7 GB) and installs Office (~2 GB): about
+30-60 minutes. Every later start is ~40 seconds; the installed system lives in
+a Docker volume and boots from disk.
 
-The first `up` downloads the Windows ISO (~4.7 GB) and installs Office from
-Microsoft's CDN (~2 GB). It is a one-time cost: the installed system lives in a
-Docker volume and boots from disk afterwards.
+Once it is up, open the URL from step 4 in your browser: you get the Windows
+desktop and can launch PowerPoint from the Start menu. To open a `.pptx`
+directly as a native window instead, see [Command line](#command-line) below.
+
+Handy commands:
+
+```bash
+scripts/pptx-deploy.sh status        # is the VM running?
+scripts/pptx-deploy.sh logs          # follow boot/provisioning output
+scripts/pptx-deploy.sh down          # stop the VM (data is kept)
+scripts/pptx-deploy.sh reset --yes   # destroy the VM entirely (disposable)
+```
+
+> `setup.sh` detects the distribution (Arch, Debian/Ubuntu, Fedora) and skips
+> packages that are already installed; it is safe to run more than once.
 
 ## Usage
 

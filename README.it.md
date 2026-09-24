@@ -88,27 +88,37 @@ credenziali, risorse, rete e licenze. Nessun segreto viene mai committato.
 
 ## Avvio rapido
 
+Tira su l'ambiente:
+
 ```bash
 git clone https://github.com/dexRand/365alFly.git
 cd 365alFly
 
-# 1. prerequisiti host: docker, docker compose, FreeRDP; verifica KVM
-scripts/setup.sh                 # installa solo ciò che manca (Arch/Debian/Fedora)
-scripts/setup.sh --check         # solo verifica, nessuna modifica
-scripts/setup.sh --with-dev      # aggiunge anche shellcheck + bats
-
-# 2. bootstrap e avvio
-scripts/pptx-deploy.sh init      # crea deploy/.env con password casuale
-scripts/pptx-deploy.sh up        # primo avvio: ~30-60 min (scarica Windows + Office)
-scripts/pptx-deploy.sh url       # apri l'URL stampato nel browser
+scripts/setup.sh              # 1. prerequisiti host (installa solo ciò che manca)
+scripts/pptx-deploy.sh init   # 2. crea deploy/.env con password casuale
+scripts/pptx-deploy.sh up     # 3. avvia la VM
+scripts/pptx-deploy.sh url    # 4. apri l'URL stampato: http://127.0.0.1:8006/
 ```
 
-> `setup.sh` rileva la distribuzione e salta i pacchetti già presenti; puoi
-> eseguirlo più volte senza problemi.
+Il primo `up` scarica Windows (~4,7 GB) e installa Office (~2 GB): circa 30-60
+minuti. Gli avvii successivi sono ~40 secondi; il sistema installato vive in un
+volume Docker e riparte dal disco.
 
-Il primo `up` scarica la ISO Windows (~4,7 GB) e installa Office dal CDN di
-Microsoft (~2 GB). È un costo una tantum: il sistema installato vive in un
-volume Docker e dopo riparte dal disco.
+Quando è su, apri l'URL dello step 4 nel browser: ottieni il desktop Windows e
+puoi lanciare PowerPoint dal menu Start. Per aprire direttamente un `.pptx`
+come finestra nativa, vedi [Riga di comando](#riga-di-comando).
+
+Comandi utili:
+
+```bash
+scripts/pptx-deploy.sh status        # la VM è attiva?
+scripts/pptx-deploy.sh logs          # segui boot/provisioning
+scripts/pptx-deploy.sh down          # ferma la VM (i dati restano)
+scripts/pptx-deploy.sh reset --yes   # elimina la VM (disposable)
+```
+
+> `setup.sh` rileva la distribuzione (Arch, Debian/Ubuntu, Fedora) e salta i
+> pacchetti già presenti; puoi eseguirlo più volte senza problemi.
 
 ## Uso
 
