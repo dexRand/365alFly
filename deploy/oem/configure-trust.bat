@@ -7,6 +7,12 @@ setlocal EnableExtensions
 call :trust PowerPoint
 call :trust Word
 call :trust Excel
+
+rem Evita il warning "Open File - Security Warning" di ShellExecute sui .bat/.cmd
+rem eseguiti da Z:\ (il wrapper usa il launcher locale C:\OEM\r.bat, ma cosi'
+rem anche lanciare uno script dalla condivisione non chiede conferma).
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Associations" /v LowRiskFileTypes /t REG_SZ /d ".bat;.cmd" /f >nul 2>&1
+
 echo [pptx-open] Trusted location Z:\ configurata
 exit /b 0
 
