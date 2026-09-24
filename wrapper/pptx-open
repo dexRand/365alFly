@@ -23,7 +23,7 @@ DEPLOY_DIR="${PPTX_DEPLOY_DIR:-$ROOT_DIR/deploy}"
 ENV_FILE="${PPTX_ENV_FILE:-$DEPLOY_DIR/.env}"
 COMPOSE_FILE="${PPTX_COMPOSE_FILE:-$DEPLOY_DIR/compose.yaml}"
 CONTAINER="${PPTX_CONTAINER:-pptx-open-windows}"
-VM_HELPER_SRC="$WRAPPER_DIR/vm/open-file.bat"
+VM_HELPER_SRC="${PPTX_VM_HELPER_SRC:-$WRAPPER_DIR/vm/open-file.bat}"
 DOCKER_BIN="${PPTX_DOCKER_BIN:-docker}"
 
 # Client FreeRDP. Default xfreerdp3: wlfreerdp3 è deprecato e non gestisce
@@ -93,10 +93,30 @@ ensure_vm() {
   local deadline=$((SECONDS + 240))
   while [ "$SECONDS" -lt "$deadline" ]; do
     if "${DOCKER[@]}" logs --tail 40 "$CONTAINER" 2>&1 | grep -q "Windows started successfully"; then
-      sleep 5; break
+      break
     fi
     sleep 3
   done
+  wait_guest_ready
+}
+
+# dockur segnala "Windows started successfully" appena parte QEMU, ma il
+# desktop/RDP sono pronti ~30s dopo: attendere evita che il trigger a tastiera
+# (o la connessione RDP) cada nel vuoto. La porta RDP è un buon indicatore che
+# il sistema operativo è su. Override con PPTX_GUEST_READY_TIMEOUT.
+wait_guest_ready() {
+  local addr="${BIND_ADDR:-127.0.0.1}" port="${RDP_PORT:-3389}"
+  local timeout="${PPTX_GUEST_READY_TIMEOUT:-180}" deadline
+  [ "$addr" = "0.0.0.0" ] && addr="127.0.0.1"
+  deadline=$((SECONDS + timeout))
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    if timeout 2 bash -c ": </dev/tcp/$addr/$port" 2>/dev/null; then
+      sleep 2
+      return 0
+    fi
+    sleep 2
+  done
+  log "attenzione: guest non pronto (RDP $addr:$port) entro ${timeout}s, procedo"
 }
 
 status() {
@@ -171,6 +191,11 @@ stage_file() {
 }
 
 trigger_helper() {
+  # Lancia Z:\o.bat dal Run dialog. Il warning "Open File - Security Warning"
+  # di ShellExecute sui .bat della condivisione viene soppresso da
+  # `LowRiskFileTypes` impostato dal provisioning (deploy/oem/configure-trust.bat).
+  # Non usare `cmd /c ...`: i comandi con spazi vengono dirottati
+  # dall'autocomplete del Run dialog.
   # shellcheck disable=SC2016  # il codice perl è letterale, non deve espandersi
   "${DOCKER[@]}" exec "$CONTAINER" perl -MIO::Socket::UNIX -e '
     my $s = IO::Socket::UNIX->new(Peer => "/run/shm/monitor.sock") or die "monitor: $!\n";
